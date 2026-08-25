@@ -37,4 +37,31 @@ const listingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes matching the actual query shapes in listingController/adminController.
+//
+// 1. Public search + home feed (getListings): filters on isActive+isApproved,
+//    optionally isBoosted, sorts by isBoosted desc then createdAt desc.
+//    This compound index covers the filter and the sort together.
+listingSchema.index({ isActive: 1, isApproved: 1, isBoosted: -1, createdAt: -1 });
+
+// 2. Dealer's own listings (dealerController / admin dealer detail):
+//    filters on dealer, sorts by createdAt desc.
+listingSchema.index({ dealer: 1, createdAt: -1 });
+
+// 3. Admin listing search (getAllListings): filters on isApproved alone,
+//    sorts by createdAt desc.
+listingSchema.index({ isApproved: 1, createdAt: -1 });
+
+// 4. Range/equality filters used in the public search form.
+listingSchema.index({ price: 1 });
+listingSchema.index({ year: 1 });
+
+// Note: make/model/region/title filters use unanchored case-insensitive
+// $regex (e.g. { $regex: 'corolla', $options: 'i' }) with no leading '^'.
+// Mongo can't use a standard index for an unanchored regex — it still has
+// to scan every candidate document character-by-character. A real fix for
+// those fields (if search volume grows) is a text index or a search
+// service (Atlas Search / Elasticsearch), not a btree index, so none is
+// added here for make/model/region — it would sit unused.
+
 module.exports = mongoose.model('Listing', listingSchema);

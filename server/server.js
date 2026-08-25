@@ -54,7 +54,10 @@ app.use(cors({
 }));
 
 app.use(helmet());
-app.use(morgan('dev'));
+// 'dev' is verbose (colored, per-request console output) — fine for local
+// development but noisy and unnecessary on a production log stream.
+// 'combined' is the standard Apache-style access log format for prod.
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // NOTE: express.json() is applied globally here.
 // The Paystack webhook route applies express.raw() at the route level
