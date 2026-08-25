@@ -201,4 +201,70 @@ const sendWelcomeEmail = async ({ email, name }) => {
   });
 };
 
-module.exports = { sendEnquiryNotification, sendWelcomeEmail };
+const sendPasswordResetEmail = async ({ email, name, resetUrl }) => {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#0d0d0d;padding:24px 32px;">
+            <span style="color:#c9a84c;font-size:22px;font-weight:900;letter-spacing:2px;">CarStand</span>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            <h2 style="margin:0 0 16px;color:#111;font-size:20px;">Reset your password</h2>
+            <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.7;">
+              Hi ${name}, we received a request to reset the password on your CarStand account.
+              This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
+            </p>
+
+            <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+              <tr>
+                <td style="background:#c9a84c;border-radius:6px;">
+                  <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;color:#0d0d0d;font-size:14px;font-weight:700;text-decoration:none;">
+                    Reset Password →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0;color:#999;font-size:12px;line-height:1.6;">
+              If the button doesn't work, copy and paste this link into your browser:<br>
+              <a href="${resetUrl}" style="color:#c9a84c;word-break:break-all;">${resetUrl}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9f9f9;padding:16px 32px;border-top:1px solid #e5e5e5;">
+            <p style="margin:0;color:#aaa;font-size:12px;">
+              CarStand · A TechSphere / Sevinity Holdings product · Accra, Ghana
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  await resend.emails.send({
+    from:    FROM,
+    to:      email,
+    subject: 'Reset your CarStand password',
+    html,
+  });
+};
+
+module.exports = { sendEnquiryNotification, sendWelcomeEmail, sendPasswordResetEmail };

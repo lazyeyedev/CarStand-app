@@ -64,8 +64,11 @@ export default function UserProfile() {
     if (pwForm.newPassword !== pwForm.confirmPassword) {
       toast.error('New passwords do not match'); return;
     }
-    if (pwForm.newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters'); return;
+    if (pwForm.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters'); return;
+    }
+    if (!/[A-Za-z]/.test(pwForm.newPassword) || !/[0-9]/.test(pwForm.newPassword)) {
+      toast.error('New password must contain at least one letter and one number'); return;
     }
     setChangingPw(true);
     try {

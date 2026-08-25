@@ -1,7 +1,16 @@
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Dealer = require('../models/Dealer');
 const generateToken = require('../utils/generateToken');
-const { sendWelcomeEmail } = require('../utils/emailService');
+const validatePassword = require('../utils/validatePassword');
+const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
+const { getPublicClientUrl } = require('../utils/clientUrl');
+
+// Separate secret for password-reset tokens if provided, otherwise reuse
+// JWT_SECRET. Kept as a distinct signing call (not generateToken) since
+// reset tokens carry a different payload shape and purpose than auth tokens.
+const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || process.env.JWT_SECRET;
+const RESET_TOKEN_EXPIRES_IN = '1h';
 
 // POST /api/auth/register
 const registerUser = async (req, res) => {
@@ -10,6 +19,12 @@ const registerUser = async (req, res) => {
   if (!name || !email || !password) {
     res.status(400);
     throw new Error('Please provide name, email, and password');
+  }
+
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    res.status(400);
+    throw new Error(passwordError);
   }
 
   const existing = await User.findOne({ email });
@@ -45,6 +60,12 @@ const registerDealer = async (req, res) => {
   if (!name || !email || !password || !businessName || !businessAddress || !region || !phone) {
     res.status(400);
     throw new Error('Please provide all required fields: name, email, password, businessName, businessAddress, region, phone');
+  }
+
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    res.status(400);
+    throw new Error(passwordError);
   }
 
   const existing = await User.findOne({ email });
@@ -159,9 +180,10 @@ const changePassword = async (req, res) => {
     throw new Error('Please provide currentPassword and newPassword');
   }
 
-  if (newPassword.length < 6) {
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) {
     res.status(400);
-    throw new Error('New password must be at least 6 characters');
+    throw new Error(passwordError);
   }
 
   const user = await User.findById(req.user._id).select('+password');
@@ -177,4 +199,81 @@ const changePassword = async (req, res) => {
   res.status(200).json({ message: 'Password updated successfully' });
 };
 
-module.exports = { registerUser, registerDealer, login, getMe, changePassword };
+// POST /api/auth/forgot-password
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400);
+    throw new Error('Please provide an email address');
+  }
+
+  const user = await User.findOne({ email });
+
+  // Always return the same response whether or not the account exists —
+  // this prevents the endpoint from being used to enumerate registered emails.
+  if (user) {
+    const resetToken = jwt.sign(
+      { id: user._id, purpose: 'password_reset' },
+      RESET_TOKEN_SECRET,
+      { expiresIn: RESET_TOKEN_EXPIRES_IN }
+    );
+    const resetUrl = `${getPublicClientUrl()}/reset-password?token=${resetToken}`;
+
+    sendPasswordResetEmail({ email: user.email, name: user.name, resetUrl }).catch(() => {});
+  }
+
+  res.status(200).json({
+    message: 'If an account exists for that email, a password reset link has been sent.',
+  });
+};
+
+// POST /api/auth/reset-password
+const resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    res.status(400);
+    throw new Error('Please provide a reset token and new password');
+  }
+
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) {
+    res.status(400);
+    throw new Error(passwordError);
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, RESET_TOKEN_SECRET);
+  } catch (err) {
+    res.status(400);
+    throw new Error('This reset link is invalid or has expired');
+  }
+
+  if (decoded.purpose !== 'password_reset') {
+    res.status(400);
+    throw new Error('This reset link is invalid or has expired');
+  }
+
+  const user = await User.findById(decoded.id).select('+password');
+  if (!user) {
+    res.status(400);
+    throw new Error('This reset link is invalid or has expired');
+  }
+
+  user.password = newPassword;
+  await user.save(); // triggers pre-save bcrypt hook
+
+  res.status(200).json({ message: 'Password has been reset successfully. You can now sign in.' });
+};
+
+module.exports = {
+  registerUser,
+  registerDealer,
+  login,
+  getMe,
+  changePassword,
+  forgotPassword,
+  resetPassword,
+};

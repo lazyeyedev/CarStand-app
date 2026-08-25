@@ -12,6 +12,8 @@ import ListingDetail       from './pages/ListingDetail';
 import Login               from './pages/Login';
 import Register            from './pages/Register';
 import RegisterDealer      from './pages/RegisterDealer';
+import ForgotPassword      from './pages/ForgotPassword';
+import ResetPassword       from './pages/ResetPassword';
 
 import DealerDashboard     from './pages/dealer/DealerDashboard';
 import DealerListings      from './pages/dealer/DealerListings';
@@ -68,6 +70,8 @@ function App() {
           <Route path="/login"           element={<Login />} />
           <Route path="/register"        element={<Register />} />
           <Route path="/register/dealer" element={<RegisterDealer />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password"  element={<ResetPassword />} />
 
           {/* Admin login — public but isolated */}
           <Route path="/admin/login" element={<AdminLogin />} />

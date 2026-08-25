@@ -16,7 +16,11 @@ const schema = yup.object({
   name:            yup.string().required('Owner name is required'),
   email:           yup.string().email('Enter a valid email').required('Email is required'),
   phone:           yup.string().required('Phone number is required'),
-  password:        yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  password:        yup.string()
+    .min(8, 'Password must be at least 8 characters')
+    .matches(/[A-Za-z]/, 'Password must contain at least one letter')
+    .matches(/[0-9]/, 'Password must contain at least one number')
+    .required('Password is required'),
   confirmPassword: yup.string()
     .oneOf([yup.ref('password')], 'Passwords do not match')
     .required('Please confirm your password'),
@@ -146,7 +150,7 @@ export default function RegisterDealer() {
             <label style={s.label}>Password</label>
             <div style={s.inputWrap}>
               <input {...register('password')} type={showPw ? 'text' : 'password'}
-                placeholder="Min. 6 characters" style={s.inputPw} />
+                placeholder="Min. 8 characters, 1 letter & 1 number" style={s.inputPw} />
               <button type="button" style={s.toggle} onClick={() => setShowPw(p => !p)}>
                 {showPw ? 'HIDE' : 'SHOW'}
               </button>
