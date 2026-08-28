@@ -2,6 +2,7 @@ const Listing = require('../models/Listing');
 const Dealer = require('../models/Dealer');
 const Enquiry = require('../models/Enquiry');
 const { cloudinary } = require('../utils/cloudinaryUpload');
+const extractPublicId = require('../utils/extractPublicId');
 const { sendEnquiryNotification } = require('../utils/emailService');
 const { getPublicClientUrl } = require('../utils/clientUrl');
 
@@ -122,14 +123,64 @@ const updateListing = async (req, res) => {
     throw new Error('Not authorized to update this listing');
   }
 
-  const forbidden = ['dealer', 'isApproved', 'views', 'enquiryCount', 'isBoosted', 'boostExpiry'];
+  const forbidden = ['dealer', 'isApproved', 'views', 'enquiryCount', 'isBoosted', 'boostExpiry', 'keptImages'];
   const updates = { ...req.body };
   forbidden.forEach((f) => delete updates[f]);
 
-  if (req.files && req.files.length > 0) {
-    const newUrls = req.files.map((f) => f.path || f.secure_url || f.url);
-    const combined = [...listing.images, ...newUrls];
-    updates.images = combined.slice(0, 10); // enforce max 10
+  const newUrls = req.files && req.files.length > 0
+    ? req.files.map((f) => f.path || f.secure_url || f.url)
+    : [];
+
+  // keptImages is sent as a single JSON-stringified array of image URLs the
+  // dealer chose to keep (see ListingForm.jsx). Its presence — even as an
+  // empty array — means the dealer's image picker was rendered and the
+  // client is telling us the full intended state, so we resolve images
+  // here rather than blindly appending. If keptImages wasn't sent at all
+  // (e.g. a non-multipart update that doesn't touch images), leave the
+  // existing images array untouched.
+  if (req.body.keptImages !== undefined) {
+    let keptImages;
+    try {
+      keptImages = JSON.parse(req.body.keptImages);
+    } catch (err) {
+      res.status(400);
+      throw new Error('keptImages must be a JSON array of image URLs');
+    }
+
+    if (!Array.isArray(keptImages) || !keptImages.every((u) => typeof u === 'string')) {
+      res.status(400);
+      throw new Error('keptImages must be a JSON array of image URLs');
+    }
+
+    // Only URLs that actually belong to this listing can be "kept" — this
+    // stops a crafted request from injecting arbitrary URLs into the
+    // listing's images array via this field.
+    const currentImages = listing.images || [];
+    const kept = keptImages.filter((u) => currentImages.includes(u));
+    const removed = currentImages.filter((u) => !kept.includes(u));
+
+    if (removed.length > 0) {
+      await Promise.all(
+        removed.map(async (url) => {
+          const publicId = extractPublicId(url);
+          if (!publicId) return;
+          try {
+            await cloudinary.uploader.destroy(publicId);
+          } catch (err) {
+            // Don't fail the whole update if Cloudinary cleanup fails for
+            // one image — the listing update itself should still succeed.
+            // The orphaned asset is a storage-cost issue, not a data-
+            // integrity one.
+          }
+        })
+      );
+    }
+
+    updates.images = [...kept, ...newUrls].slice(0, 10); // enforce max 10
+  } else if (newUrls.length > 0) {
+    // Backward-compatible path: no keptImages field sent, but new files
+    // were uploaded — append them to the existing set, as before.
+    updates.images = [...(listing.images || []), ...newUrls].slice(0, 10);
   }
 
   const updated = await Listing.findByIdAndUpdate(req.params.id, updates, {
@@ -190,14 +241,10 @@ const deleteListingImage = async (req, res) => {
     throw new Error('imageUrl is required');
   }
 
-  // Extract Cloudinary public ID from URL: folder/filename (no extension)
-  const parts = imageUrl.split('/');
-  const filenameWithExt = parts[parts.length - 1];
-  const filename = filenameWithExt.split('.')[0];
-  const folder = parts[parts.length - 2];
-  const publicId = `${folder}/${filename}`;
-
-  await cloudinary.uploader.destroy(publicId);
+  const publicId = extractPublicId(imageUrl);
+  if (publicId) {
+    await cloudinary.uploader.destroy(publicId);
+  }
 
   const updatedImages = listing.images.filter((url) => url !== imageUrl);
   const updated = await Listing.findByIdAndUpdate(

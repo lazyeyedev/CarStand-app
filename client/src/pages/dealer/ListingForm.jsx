@@ -73,7 +73,12 @@ export default function ListingForm({ defaultValues = {}, existingImages = [], o
     const fd = new FormData();
     Object.entries(data).forEach(([k,v]) => { if (v !== null && v !== undefined) fd.append(k, v); });
     newFiles.forEach(f => fd.append('images', f));
-    keptImgs.forEach(url => fd.append('keptImages', url));
+    // Sent as a single JSON array (not repeated fields) so the server can
+    // always tell "kept nothing" apart from "field not sent" — repeated
+    // fields disappear entirely when the array is empty, which made
+    // removing every existing photo indistinguishable from not touching
+    // images at all.
+    fd.append('keptImages', JSON.stringify(keptImgs));
     onSubmit(fd);
   };
 
