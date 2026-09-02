@@ -194,6 +194,7 @@ const changePassword = async (req, res) => {
   }
 
   user.password = newPassword;
+  user.passwordChangedAt = new Date();
   await user.save(); // triggers pre-save bcrypt hook
 
   res.status(200).json({ message: 'Password updated successfully' });
@@ -262,7 +263,20 @@ const resetPassword = async (req, res) => {
     throw new Error('This reset link is invalid or has expired');
   }
 
+  // A JWT doesn't know it's already been used — nothing about the token
+  // itself changes on redemption. So single-use has to be enforced by
+  // comparing when the token was issued (decoded.iat, in seconds) against
+  // when the password was last changed. Once a token is redeemed, this
+  // save sets passwordChangedAt to now, which makes decoded.iat "stale"
+  // for that same token (and any other reset link issued before now) on
+  // every future attempt.
+  if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime()) {
+    res.status(400);
+    throw new Error('This reset link is invalid or has expired');
+  }
+
   user.password = newPassword;
+  user.passwordChangedAt = new Date();
   await user.save(); // triggers pre-save bcrypt hook
 
   res.status(200).json({ message: 'Password has been reset successfully. You can now sign in.' });

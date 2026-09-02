@@ -201,7 +201,11 @@ export default function AdminDealerDetail() {
         {listings.length === 0
           ? <div style={{ padding: '2rem', textAlign: 'center', color: '#555', fontSize: '0.85rem' }}>No listings yet.</div>
           : listings.map((l) => (
-              <div key={l._id} style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Link key={l._id} to={`/admin/listings/${l._id}`}
+                style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: 12,
+                  textDecoration: 'none', cursor: 'pointer' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#1a1a1a'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                 <img src={l.images?.[0] || PLACEHOLDER} alt="" onError={(e) => { e.target.src = PLACEHOLDER; }}
                   style={{ width: 64, height: 46, objectFit: 'cover', borderRadius: 5, border: '1px solid #2a2a2a', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -215,7 +219,7 @@ export default function AdminDealerDetail() {
                   : l.isActive
                     ? <Badge label="Pending" bg="#c41e2a22" color="#c41e2a" />
                     : <Badge label="Rejected" bg="#e0525222" color="#e05252" />}
-              </div>
+              </Link>
             ))}
       </div>
 

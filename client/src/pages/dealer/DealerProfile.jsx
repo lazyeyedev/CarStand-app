@@ -27,6 +27,10 @@ export default function DealerProfile() {
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
 
+  const [pwForm, setPwForm] = useState({ currentPassword:'', newPassword:'', confirmPassword:'' });
+  const [showPw, setShowPw] = useState({ currentPassword:false, newPassword:false, confirmPassword:false });
+  const [changingPw, setChangingPw] = useState(false);
+
   const logoRef  = useRef(null);
   const coverRef = useRef(null);
 
@@ -72,6 +76,32 @@ export default function DealerProfile() {
       toast.error(err.response?.data?.message || 'Update failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      toast.error('New passwords do not match'); return;
+    }
+    if (pwForm.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters'); return;
+    }
+    if (!/[A-Za-z]/.test(pwForm.newPassword) || !/[0-9]/.test(pwForm.newPassword)) {
+      toast.error('New password must contain at least one letter and one number'); return;
+    }
+    setChangingPw(true);
+    try {
+      await axiosInstance.put('/auth/change-password', {
+        currentPassword: pwForm.currentPassword,
+        newPassword:     pwForm.newPassword,
+      });
+      toast.success('Password changed successfully');
+      setPwForm({ currentPassword:'', newPassword:'', confirmPassword:'' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Password change failed');
+    } finally {
+      setChangingPw(false);
     }
   };
 
@@ -224,6 +254,43 @@ export default function DealerProfile() {
               cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Saving…' : 'Save Profile'}
           </button>
+        </form>
+
+        {/* Change password — separate form, not nested inside the profile form */}
+        <form onSubmit={handleChangePassword} noValidate>
+          <div style={sect}>
+            <div style={sectH}>Change Password</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'1rem', maxWidth:420 }}>
+              {[
+                { field:'currentPassword', fieldLabel:'Current Password' },
+                { field:'newPassword',     fieldLabel:'New Password' },
+                { field:'confirmPassword', fieldLabel:'Confirm New Password' },
+              ].map(({ field, fieldLabel }) => (
+                <div key={field}>
+                  <label style={label}>{fieldLabel}</label>
+                  <div style={{ position:'relative' }}>
+                    <input
+                      type={showPw[field] ? 'text' : 'password'}
+                      value={pwForm[field]}
+                      onChange={e => setPwForm(p => ({ ...p, [field]: e.target.value }))}
+                      style={{ ...inp, paddingRight:'3.5rem' }} />
+                    <button type="button" onClick={() => setShowPw(p => ({ ...p, [field]: !p[field] }))}
+                      style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
+                        background:'none', border:'none', color:'#666', fontSize:'0.75rem', cursor:'pointer' }}>
+                      {showPw[field] ? 'HIDE' : 'SHOW'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button type="submit" disabled={changingPw}
+              style={{ marginTop:'1.25rem', background:'#1e1e1e', color:'#ececec',
+                border:'1px solid #2a2a2a', borderRadius:6, padding:'0.65rem 1.5rem',
+                fontWeight:600, fontSize:'0.9rem',
+                cursor: changingPw ? 'not-allowed' : 'pointer', opacity: changingPw ? 0.6 : 1 }}>
+              {changingPw ? 'Changing…' : 'Change Password'}
+            </button>
+          </div>
         </form>
       </div>
     </DealerLayout>

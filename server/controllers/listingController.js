@@ -87,6 +87,11 @@ const createListing = async (req, res) => {
 
   const imageUrls = req.files ? req.files.map((f) => f.path || f.secure_url || f.url) : [];
 
+  if (imageUrls.length === 0) {
+    res.status(400);
+    throw new Error('At least one image is required');
+  }
+
   const listing = await Listing.create({
     dealer: dealer._id,
     title, make, model,
@@ -158,6 +163,13 @@ const updateListing = async (req, res) => {
     const currentImages = listing.images || [];
     const kept = keptImages.filter((u) => currentImages.includes(u));
     const removed = currentImages.filter((u) => !kept.includes(u));
+
+    // Validate the final count BEFORE touching Cloudinary — rejecting after
+    // destroying assets would leave the DB pointing at deleted images.
+    if (kept.length + newUrls.length === 0) {
+      res.status(400);
+      throw new Error('A listing must have at least one image');
+    }
 
     if (removed.length > 0) {
       await Promise.all(

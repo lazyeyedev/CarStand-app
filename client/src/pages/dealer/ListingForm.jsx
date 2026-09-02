@@ -70,6 +70,10 @@ export default function ListingForm({ defaultValues = {}, existingImages = [], o
   const onDrop = (e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); };
 
   const handleFormSubmit = (data) => {
+    if (keptImgs.length + newFiles.length === 0) {
+      alert('At least one image is required.');
+      return;
+    }
     const fd = new FormData();
     Object.entries(data).forEach(([k,v]) => { if (v !== null && v !== undefined) fd.append(k, v); });
     newFiles.forEach(f => fd.append('images', f));

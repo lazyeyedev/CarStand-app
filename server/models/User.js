@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, default: '' },
     savedListings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Listing' }],
     isActive: { type: Boolean, default: true },
+    // Set whenever the password changes (via change-password or reset-password).
+    // Used to invalidate any reset tokens issued before this timestamp, so a
+    // reset link can't be reused after it's already been acted on — JWTs are
+    // stateless and don't expire themselves just because they were used once.
+    passwordChangedAt: { type: Date },
   },
   { timestamps: true }
 );
