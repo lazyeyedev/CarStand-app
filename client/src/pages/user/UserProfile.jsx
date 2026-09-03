@@ -23,7 +23,7 @@ export default function UserProfile() {
 
   const [form, setForm] = useState({ name:'', phone:'' });
   const [pwForm, setPwForm] = useState({ currentPassword:'', newPassword:'', confirmPassword:'' });
-  const [showPw, setShowPw] = useState({ current:false, new:false, confirm:false });
+  const [showPw, setShowPw] = useState({ currentPassword:false, newPassword:false, confirmPassword:false });
 
   useEffect(() => {
     axiosInstance.get('/auth/me').then(r => {
@@ -82,22 +82,6 @@ export default function UserProfile() {
       toast.error(err.response?.data?.message || 'Password change failed');
     } finally { setChangingPw(false); }
   };
-
-  const PwField = ({ field, label: fieldLabel, value }) => (
-    <div>
-      <label style={lbl}>{fieldLabel}</label>
-      <div style={{ position:'relative' }}>
-        <input type={showPw[field] ? 'text' : 'password'} value={value}
-          onChange={e => setPwForm(p => ({ ...p, [field]: e.target.value }))}
-          style={{ ...inp, paddingRight:'3.5rem' }} />
-        <button type="button" onClick={() => setShowPw(p => ({ ...p, [field]: !p[field] }))}
-          style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
-            background:'none', border:'none', color:'#666', fontSize:'0.75rem', cursor:'pointer' }}>
-          {showPw[field] ? 'HIDE' : 'SHOW'}
-        </button>
-      </div>
-    </div>
-  );
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'#0d0d0d' }}>
@@ -179,9 +163,27 @@ export default function UserProfile() {
           <div style={sectH}>Change Password</div>
           <form onSubmit={handleChangePassword} noValidate>
             <div style={{ display:'flex', flexDirection:'column', gap:'1rem', maxWidth:420 }}>
-              <PwField field="current" label="Current Password" value={pwForm.currentPassword} />
-              <PwField field="new"     label="New Password"     value={pwForm.newPassword} />
-              <PwField field="confirm" label="Confirm New Password" value={pwForm.confirmPassword} />
+              {[
+                { field:'currentPassword', fieldLabel:'Current Password' },
+                { field:'newPassword',     fieldLabel:'New Password' },
+                { field:'confirmPassword', fieldLabel:'Confirm New Password' },
+              ].map(({ field, fieldLabel }) => (
+                <div key={field}>
+                  <label style={lbl}>{fieldLabel}</label>
+                  <div style={{ position:'relative' }}>
+                    <input
+                      type={showPw[field] ? 'text' : 'password'}
+                      value={pwForm[field]}
+                      onChange={e => setPwForm(p => ({ ...p, [field]: e.target.value }))}
+                      style={{ ...inp, paddingRight:'3.5rem' }} />
+                    <button type="button" onClick={() => setShowPw(p => ({ ...p, [field]: !p[field] }))}
+                      style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
+                        background:'none', border:'none', color:'#666', fontSize:'0.75rem', cursor:'pointer' }}>
+                      {showPw[field] ? 'HIDE' : 'SHOW'}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
             <button type="submit" disabled={changingPw}
               style={{ marginTop:'1.25rem', background:'#1e1e1e', color:'#ececec',
