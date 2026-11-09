@@ -1,10 +1,12 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute, { AdminProtectedRoute } from './components/ProtectedRoute';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 
 import Home                from './pages/Home';
 import Search              from './pages/Search';
@@ -36,17 +38,27 @@ const AdminListingDetail = lazy(() => import('./pages/admin/AdminListingDetail')
 const AdminBoosts        = lazy(() => import('./pages/admin/AdminBoosts'));
 
 const NotFound = () => (
-  <div style={{ color: '#c41e2a', textAlign: 'center', padding: '4rem',
-    background: '#0a0a0a', minHeight: '100vh' }}>
-    <h1 style={{ fontSize: '4rem' }}>404</h1>
-    <p>Page not found.</p>
+  <div className="page">
+    <Navbar />
+    <main id="main" className="page-main container section" style={{ display: 'grid', placeItems: 'center' }}>
+      <div className="center" style={{ maxWidth: 460 }}>
+        <div className="eyebrow">Error 404</div>
+        <h1 className="mt-2" style={{ fontSize: 'var(--fs-hero)', letterSpacing: '-.05em' }}>Wrong turn.</h1>
+        <p className="mt-4">The page you're looking for doesn't exist or has moved.</p>
+        <div className="row gap-3 mt-8" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link to="/" className="btn btn-secondary">Go home</Link>
+          <Link to="/listings" className="btn btn-primary">Browse cars</Link>
+        </div>
+      </div>
+    </main>
+    <Footer />
   </div>
 );
 
 const AdminChunkFallback = () => (
-  <div style={{ background: '#0a0a0a', minHeight: '100vh', display: 'flex',
-    alignItems: 'center', justifyContent: 'center' }}>
-    <div style={{ color: '#c41e2a', fontSize: '0.85rem', letterSpacing: 1 }}>Loading admin panel…</div>
+  <div className="page" style={{ alignItems: 'center', justifyContent: 'center' }} role="status">
+    <span className="spinner" style={{ width: 28, height: 28, color: 'var(--red-text)' }} />
+    <span className="sr-only">Loading</span>
   </div>
 );
 
@@ -59,7 +71,7 @@ function App() {
           autoClose={3000}
           hideProgressBar={false}
           theme="dark"
-          toastStyle={{ backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #2a2a2a' }}
+          toastStyle={{ backgroundColor: '#1a1a1a', color: '#ececec' }}
         />
         <Suspense fallback={<AdminChunkFallback />}>
           <Routes>

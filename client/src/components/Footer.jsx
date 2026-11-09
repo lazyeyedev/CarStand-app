@@ -1,53 +1,40 @@
 import { Link } from 'react-router-dom';
+import Icon, { Brand } from './Icon';
 
+// Contact details are deliberately limited to what's true today: the
+// platform has no owned domain or public phone line yet, so no address is
+// shown that would send buyers' mail or calls to a stranger.
 export default function Footer() {
+  const year = new Date().getFullYear();
   return (
-    <footer style={{ background:'#111', borderTop:'1px solid #1e1e1e', padding:'3rem 1.5rem 1.5rem' }}>
-      <div style={{ maxWidth:1280, margin:'0 auto' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'2rem', marginBottom:'2.5rem' }}>
-
+    <footer className="footer">
+      <div className="container">
+        <div className="footer-grid">
           <div>
-            <div style={{ fontSize:'1.4rem', fontWeight:800, color:'#c41e2a', marginBottom:'0.75rem' }}>CarStand</div>
-            <p style={{ color:'#666', fontSize:'0.85rem', lineHeight:1.7 }}>
-              Ghana's premier marketplace for buying and selling quality vehicles. Trusted by dealers across all sixteen regions.
+            <Brand Link={Link} />
+            <p className="text-sm mt-4" style={{ maxWidth: '40ch' }}>
+              Ghana's marketplace for quality vehicles from verified dealers, across all sixteen regions.
             </p>
           </div>
 
-          <div>
-            <div style={{ color:'#c41e2a', fontWeight:700, fontSize:'0.85rem', letterSpacing:1,
-              textTransform:'uppercase', marginBottom:'1rem' }}>Quick Links</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-              {[['Browse Cars','/listings'],['Sell Your Car','/register/dealer'],
-                ['Login','/login'],['Register','/register']].map(([label,to]) => (
-                <Link key={to} to={to} style={{ color:'#888', fontSize:'0.85rem', textDecoration:'none' }}
-                  onMouseEnter={e=>e.target.style.color='#c41e2a'}
-                  onMouseLeave={e=>e.target.style.color='#888'}>
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
+          <nav aria-label="Footer">
+            <h4>Marketplace</h4>
+            <Link to="/listings" className="f-link">Browse cars</Link>
+            <Link to="/register/dealer" className="f-link">Sell as a dealer</Link>
+            <Link to="/login" className="f-link">Log in</Link>
+            <Link to="/register" className="f-link">Create account</Link>
+          </nav>
 
           <div>
-            <div style={{ color:'#c41e2a', fontWeight:700, fontSize:'0.85rem', letterSpacing:1,
-              textTransform:'uppercase', marginBottom:'1rem' }}>Contact</div>
-            <div style={{ color:'#888', fontSize:'0.85rem', lineHeight:1.9 }}>
-              <div>📍 Accra, Ghana</div>
-              <div>📧 hello@carstand.net</div>
-              <div>📞 +233 XX XXX XXXX</div>
-            </div>
+            <h4>Get in touch</h4>
+            <div className="footer-line"><Icon name="pin" /> Accra, Ghana</div>
+            <div className="footer-line"><Icon name="shield" /> Every dealer is reviewed before listing</div>
           </div>
         </div>
 
-        <div style={{ borderTop:'1px solid #1e1e1e', paddingTop:'1.25rem',
-          display:'flex', flexWrap:'wrap', justifyContent:'space-between',
-          alignItems:'center', gap:'0.5rem' }}>
-          <span style={{ color:'#555', fontSize:'0.8rem' }}>
-            © 2026 CarStand. All rights reserved.
-          </span>
-          <span style={{ color:'#444', fontSize:'0.8rem' }}>
-            A <span style={{ color:'#c41e2a' }}>TechSphere</span> / <span style={{ color:'#c41e2a' }}>Sevinity Holdings</span> product · Accra, Ghana
-          </span>
+        <div className="footer-base">
+          <span>© {year} CarStand. All rights reserved.</span>
+          <span>A TechSphere / Sevinity Holdings product</span>
         </div>
       </div>
     </footer>

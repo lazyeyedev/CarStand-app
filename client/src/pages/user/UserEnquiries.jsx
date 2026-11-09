@@ -3,178 +3,93 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import Icon from '../../components/Icon';
+import { PageHeader, StatusBadge, EmptyState } from '../../components/DashboardShell';
 import axiosInstance from '../../api/axiosInstance';
-
 import { getPlaceholder } from '../../utils/placeholder';
-const PLACEHOLDER = getPlaceholder(72, 52);
 
-const STATUS_STYLE = {
-  new:       { bg:'#c41e2a22', color:'#c41e2a' },
-  read:      { bg:'#88888822', color:'#888'     },
-  responded: { bg:'#52c07a22', color:'#52c07a'  },
-  closed:    { bg:'#33333322', color:'#555'      },
-};
-
-const TYPE_LABEL = {
-  general:'General', price:'Price Negotiation', test_drive:'Test Drive', finance:'Finance'
-};
+const PLACEHOLDER = getPlaceholder(96, 64);
+const TYPE_LABEL = { general: 'General', price: 'Price negotiation', test_drive: 'Test drive', finance: 'Finance' };
+const fmtDate = (d, time) => new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', ...(time ? { hour: '2-digit', minute: '2-digit' } : {}) });
 
 export default function UserEnquiries() {
   const [enquiries, setEnquiries] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [expanded,  setExpanded]  = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
     axiosInstance.get('/users/enquiries')
-      .then(r => setEnquiries(r.data.enquiries || []))
-      .catch(() => toast.error('Failed to load enquiries'))
+      .then((r) => setEnquiries(r.data.enquiries || []))
+      .catch(() => toast.error('Your enquiries could not be loaded'))
       .finally(() => setLoading(false));
   }, []);
 
-  const toggle = (id) => setExpanded(prev => prev === id ? null : id);
-
   return (
-    <div style={{ minHeight:'100vh', background:'#0d0d0d', display:'flex', flexDirection:'column' }}>
+    <div className="page">
       <Navbar />
-      <main style={{ flex:1, maxWidth:900, margin:'0 auto', width:'100%', padding:'2rem 1.5rem' }}>
-
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
-          <div>
-            <h1 style={{ color:'#ececec', fontSize:'1.4rem', fontWeight:700 }}>My Enquiries</h1>
-            {!loading && (
-              <div style={{ color:'#555', fontSize:'0.8rem', marginTop:3 }}>
-                {enquiries.length} enquir{enquiries.length !== 1 ? 'ies' : 'y'} sent
-              </div>
-            )}
-          </div>
-          <Link to="/listings" style={{ background:'#c41e2a', color:'#0d0d0d', padding:'0.55rem 1.1rem',
-            borderRadius:6, fontWeight:700, fontSize:'0.85rem', textDecoration:'none' }}>
-            Browse Cars
-          </Link>
-        </div>
+      <main id="main" className="page-main container section-sm" style={{ maxWidth: 920 }}>
+        <PageHeader
+          title="My enquiries"
+          subtitle={loading ? 'Loading…' : `${enquiries.length} ${enquiries.length === 1 ? 'enquiry' : 'enquiries'} sent`}
+          actions={<Link to="/listings" className="btn btn-primary"><Icon name="search" /> Browse cars</Link>}
+        />
 
         {loading ? (
-          <div style={{ textAlign:'center', color:'#444', padding:'4rem' }}>Loading…</div>
+          <div className="stack gap-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 92, borderRadius: 'var(--radius-md)' }} />)}</div>
         ) : enquiries.length === 0 ? (
-          <div style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10,
-            padding:'3rem', textAlign:'center' }}>
-            <div style={{ fontSize:'2.5rem', marginBottom:'1rem' }}>💬</div>
-            <div style={{ color:'#555', marginBottom:'1rem' }}>You haven't sent any enquiries yet.</div>
-            <Link to="/listings" style={{ color:'#c41e2a', fontWeight:600 }}>Find a car →</Link>
+          <div className="card">
+            <EmptyState icon="message" title="No enquiries yet" action={<Link to="/listings" className="btn btn-primary">Find a car</Link>}>
+              When you contact a dealer about a car, the conversation is tracked here.
+            </EmptyState>
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-            {enquiries.map(e => {
-              const isOpen = expanded === e._id;
-              const status = STATUS_STYLE[e.status] || STATUS_STYLE.new;
-              const thumb  = e.listing?.images?.[0] || PLACEHOLDER;
-
+          <ul className="stack gap-3" style={{ listStyle: 'none' }}>
+            {enquiries.map((e) => {
+              const open = expanded === e._id;
+              const panelId = `enq-${e._id}`;
               return (
-                <div key={e._id}
-                  style={{ background:'#141414', border:`1px solid ${isOpen?'#c41e2a44':'#2a2a2a'}`,
-                    borderRadius:10, overflow:'hidden', transition:'border-color 0.2s' }}>
-
-                  {/* Summary row */}
-                  <div onClick={() => toggle(e._id)}
-                    style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'1rem 1.25rem',
-                      cursor:'pointer' }}
-                    onMouseEnter={e=>e.currentTarget.style.background='#181818'}
-                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-
-                    <img src={thumb} alt=""
-                      style={{ width:72, height:52, objectFit:'cover', borderRadius:6,
-                        border:'1px solid #2a2a2a', flexShrink:0 }}
-                      onError={ev=>ev.target.src=PLACEHOLDER} />
-
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ color:'#ececec', fontSize:'0.88rem', fontWeight:600,
-                        whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                        {e.listing?.title || 'Listing no longer available'}
-                      </div>
-                      <div style={{ color:'#666', fontSize:'0.76rem', marginTop:3, display:'flex', gap:8, flexWrap:'wrap' }}>
-                        <span>{TYPE_LABEL[e.type] || e.type}</span>
-                        <span>·</span>
-                        <span>{e.dealer?.businessName}</span>
-                        <span>·</span>
-                        <span>{new Date(e.createdAt).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}</span>
-                      </div>
-                      <div style={{ color:'#555', fontSize:'0.78rem', marginTop:4,
-                        whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                        {e.message}
-                      </div>
+                <li key={e._id} className="card" style={{ overflow: 'hidden', borderColor: open ? 'var(--color-border-strong)' : undefined }}>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(open ? null : e._id)}
+                    aria-expanded={open}
+                    aria-controls={panelId}
+                    className="row gap-4"
+                    style={{ width: '100%', padding: 'var(--sp-4)', background: 'none', border: 0, textAlign: 'left' }}
+                  >
+                    <img src={e.listing?.images?.[0] || PLACEHOLDER} alt="" style={{ width: 84, height: 58, borderRadius: 6, objectFit: 'cover', flexShrink: 0, border: '1px solid var(--color-border)' }} onError={(ev) => { ev.currentTarget.src = PLACEHOLDER; }} />
+                    <div className="grow">
+                      <div className="truncate" style={{ fontWeight: 600 }}>{e.listing?.title || 'Listing no longer available'}</div>
+                      <div className="text-xs muted mt-2">{[TYPE_LABEL[e.type] || e.type, e.dealer?.businessName, fmtDate(e.createdAt)].filter(Boolean).join(' · ')}</div>
+                      {!open && <div className="text-sm muted truncate mt-2">{e.message}</div>}
                     </div>
-
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end',
-                      gap:8, flexShrink:0 }}>
-                      <span style={{ background:status.bg, color:status.color, fontSize:'0.7rem',
-                        padding:'2px 9px', borderRadius:4, fontWeight:700, textTransform:'uppercase' }}>
-                        {e.status}
-                      </span>
-                      <span style={{ color:'#444', fontSize:'0.75rem', transition:'transform 0.2s',
-                        transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
+                    <div className="stack gap-2" style={{ alignItems: 'flex-end', flexShrink: 0 }}>
+                      <StatusBadge status={e.status} />
+                      <Icon name="chevDown" style={{ color: 'var(--color-text-muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--t-fast) var(--ease)' }} />
                     </div>
-                  </div>
+                  </button>
 
-                  {/* Expanded detail */}
-                  {isOpen && (
-                    <div style={{ borderTop:'1px solid #1e1e1e', padding:'1.25rem',
-                      background:'#111', animation:'fadeIn 0.15s ease' }}>
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.25rem',
-                        marginBottom:'1rem' }}>
-                        <div>
-                          <div style={{ color:'#666', fontSize:'0.75rem', fontWeight:700,
-                            textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>
-                            Enquiry Type
-                          </div>
-                          <div style={{ color:'#ececec', fontSize:'0.88rem' }}>
-                            {TYPE_LABEL[e.type] || e.type}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ color:'#666', fontSize:'0.75rem', fontWeight:700,
-                            textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>
-                            Dealer
-                          </div>
-                          <div style={{ color:'#ececec', fontSize:'0.88rem' }}>
-                            {e.dealer?.businessName || '—'}
-                          </div>
-                        </div>
-                        <div style={{ gridColumn:'1/-1' }}>
-                          <div style={{ color:'#666', fontSize:'0.75rem', fontWeight:700,
-                            textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>
-                            Your Message
-                          </div>
-                          <div style={{ background:'#1a1a1a', border:'1px solid #2a2a2a',
-                            borderRadius:6, padding:'0.75rem 1rem', color:'#ccc',
-                            fontSize:'0.88rem', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
-                            {e.message}
-                          </div>
-                        </div>
+                  {open && (
+                    <div id={panelId} className="card-pad" style={{ borderTop: '1px solid var(--color-border-soft)', background: '#111' }}>
+                      <div className="grid-2 mb-4">
+                        <div><div className="label-caps">Type</div><div className="mt-2">{TYPE_LABEL[e.type] || e.type}</div></div>
+                        <div><div className="label-caps">Dealer</div><div className="mt-2">{e.dealer?.businessName || 'Not available'}</div></div>
                       </div>
-
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
-                        <div style={{ color:'#555', fontSize:'0.78rem' }}>
-                          Sent {new Date(e.createdAt).toLocaleString('en-GB', {
-                            day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
-                          })}
-                        </div>
-                        {e.listing?._id && (
-                          <Link to={`/listings/${e.listing._id}`}
-                            style={{ color:'#c41e2a', fontSize:'0.82rem', fontWeight:600 }}>
-                            View Listing →
-                          </Link>
-                        )}
+                      <div className="label-caps mb-2">Your message</div>
+                      <p className="card card-pad-sm" style={{ background: 'var(--color-surface-2)', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{e.message}</p>
+                      <div className="row wrap between gap-2 mt-4">
+                        <span className="text-xs muted">Sent {fmtDate(e.createdAt, true)}</span>
+                        {e.listing?._id && <Link to={`/listings/${e.listing._id}`} className="btn btn-secondary btn-sm">View listing <Icon name="arrowRight" /></Link>}
                       </div>
                     </div>
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </main>
       <Footer />
-      <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
   );
 }

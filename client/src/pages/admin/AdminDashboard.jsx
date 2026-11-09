@@ -2,31 +2,40 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdminLayout from './AdminLayout';
+import Icon from '../../components/Icon';
+import { PageHeader, TableSkeleton, EmptyState } from '../../components/DashboardShell';
 import axiosInstance from '../../api/axiosInstance';
 
-const StatCard = ({ label, value, accent, loading }) => (
-  <div style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10,
-    padding:'1.2rem 1.4rem', flex:1, minWidth:120 }}>
-    <div style={{ color: accent ? '#c41e2a' : '#ececec', fontSize:'1.8rem',
-      fontWeight:900, lineHeight:1, marginBottom:6 }}>
-      {loading ? <span style={{ color:'#2a2a2a' }}>—</span> : (value ?? 0).toLocaleString()}
-    </div>
-    <div style={{ color:'#555', fontSize:'0.75rem', fontWeight:600,
-      textTransform:'uppercase', letterSpacing:0.5 }}>{label}</div>
-  </div>
-);
+const Stat = ({ label, value, loading, attention, to }) => {
+  const body = (
+    <>
+      <div className="stat-label row between">{label}{attention && value > 0 && <span className="badge badge-warning">Needs review</span>}</div>
+      <div className="stat-value">{loading ? <span className="skeleton" style={{ display: 'block', height: 34, width: 64 }} /> : (value ?? 0).toLocaleString()}</div>
+    </>
+  );
+  return to ? <Link to={to} className="stat" style={{ color: 'inherit', display: 'block' }}>{body}</Link> : <div className="stat">{body}</div>;
+};
 
-const QUICK_LINKS = [
-  ['/admin/dealers',  'Manage Dealers',  '◧'],
-  ['/admin/listings', 'Manage Listings', '◉'],
-  ['/admin/users',    'Manage Users',    '◎'],
-  ['/admin/boosts',   'View Boosts',     '★'],
-];
+function Queue({ title, to, loading, items, empty, render }) {
+  return (
+    <section className="card" aria-label={title}>
+      <div className="card-head">
+        <h2 className="card-title row gap-2">{title} {!loading && items.length > 0 && <span className="badge badge-warning">{items.length}</span>}</h2>
+        <Link to={to} className="text-sm">View all</Link>
+      </div>
+      {loading ? <TableSkeleton rows={3} cols={2} /> : items.length === 0
+        ? <EmptyState icon="checkCircle" title="All caught up">{empty}</EmptyState>
+        : <ul style={{ listStyle: 'none' }}>{items.map(render)}</ul>}
+    </section>
+  );
+}
+
+const rowStyle = { padding: 'var(--sp-3) var(--sp-5)', borderBottom: '1px solid var(--color-border-soft)' };
 
 export default function AdminDashboard() {
-  const [stats,    setStats]    = useState(null);
-  const [pending,  setPending]  = useState({ dealers:[], listings:[] });
-  const [loading,  setLoading]  = useState(true);
+  const [stats, setStats] = useState(null);
+  const [pending, setPending] = useState({ dealers: [], listings: [] });
+  const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState({});
 
   useEffect(() => {
@@ -37,149 +46,82 @@ export default function AdminDashboard() {
     ]).then(([s, d, l]) => {
       setStats(s.data);
       setPending({ dealers: d.data.dealers || [], listings: l.data.listings || [] });
-    }).catch(() => toast.error('Failed to load dashboard'))
+    }).catch(() => toast.error('The dashboard could not be loaded'))
       .finally(() => setLoading(false));
   }, []);
 
-  const approveDealer = async (id) => {
-    setApproving(p => ({ ...p, [id]: true }));
+  const approve = async (kind, id) => {
+    setApproving((p) => ({ ...p, [id]: true }));
     try {
-      await axiosInstance.put(`/admin/dealers/${id}/approve`);
-      setPending(p => ({ ...p, dealers: p.dealers.filter(d => d._id !== id) }));
-      setStats(s => s ? { ...s, pendingDealers: s.pendingDealers - 1 } : s);
-      toast.success('Dealer approved');
-    } catch { toast.error('Approval failed'); }
-    finally { setApproving(p => ({ ...p, [id]: false })); }
+      await axiosInstance.put(`/admin/${kind}/${id}/approve`);
+      setPending((p) => ({ ...p, [kind]: p[kind].filter((x) => x._id !== id) }));
+      const key = kind === 'dealers' ? 'pendingDealers' : 'pendingListings';
+      setStats((s) => (s ? { ...s, [key]: s[key] - 1 } : s));
+      toast.success(kind === 'dealers' ? 'Dealer approved' : 'Listing approved');
+    } catch {
+      toast.error('Approval failed');
+    } finally {
+      setApproving((p) => ({ ...p, [id]: false }));
+    }
   };
 
-  const approveListing = async (id) => {
-    setApproving(p => ({ ...p, [id]: true }));
-    try {
-      await axiosInstance.put(`/admin/listings/${id}/approve`);
-      setPending(p => ({ ...p, listings: p.listings.filter(l => l._id !== id) }));
-      setStats(s => s ? { ...s, pendingListings: s.pendingListings - 1 } : s);
-      toast.success('Listing approved');
-    } catch { toast.error('Approval failed'); }
-    finally { setApproving(p => ({ ...p, [id]: false })); }
-  };
+  const ApproveBtn = ({ kind, id, label }) => (
+    <button type="button" className="btn btn-success btn-sm" onClick={() => approve(kind, id)} disabled={approving[id]} aria-label={`Approve ${label}`}>
+      {approving[id] ? <span className="spinner" /> : <><Icon name="check" /> Approve</>}
+    </button>
+  );
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth:1100 }}>
-        <h1 style={{ color:'#ececec', fontSize:'1.4rem', fontWeight:700, marginBottom:'1.5rem' }}>
-          Dashboard
-        </h1>
+      <PageHeader
+        title="Dashboard"
+        subtitle={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      />
 
-        {/* Stats */}
-        <div style={{ display:'flex', flexWrap:'wrap', gap:'1rem', marginBottom:'2rem' }}>
-          <StatCard label="Total Users"       value={stats?.totalUsers}       loading={loading} />
-          <StatCard label="Total Dealers"     value={stats?.totalDealers}     loading={loading} />
-          <StatCard label="Pending Dealers"   value={stats?.pendingDealers}   loading={loading} accent />
-          <StatCard label="Total Listings"    value={stats?.totalListings}    loading={loading} />
-          <StatCard label="Pending Listings"  value={stats?.pendingListings}  loading={loading} accent />
-          <StatCard label="Total Enquiries"   value={stats?.totalEnquiries}   loading={loading} />
-          <StatCard label="Active Boosts"     value={stats?.activeBoosts}     loading={loading} />
-        </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr auto', gap:'1.5rem', alignItems:'start' }}
-          className="dash-grid">
-
-          {/* Pending dealers */}
-          <div style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10, overflow:'hidden' }}>
-            <div style={{ padding:'0.9rem 1.25rem', borderBottom:'1px solid #1e1e1e',
-              display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ color:'#ececec', fontWeight:700, fontSize:'0.88rem' }}>
-                Pending Dealers
-              </span>
-              <Link to="/admin/dealers?approved=false" style={{ color:'#c41e2a', fontSize:'0.78rem' }}>
-                View all
-              </Link>
-            </div>
-            {loading ? <div style={{ padding:'2rem', color:'#333', textAlign:'center' }}>Loading…</div>
-            : pending.dealers.length === 0
-              ? <div style={{ padding:'2rem', color:'#444', textAlign:'center', fontSize:'0.85rem' }}>
-                  No pending dealers ✓
-                </div>
-              : pending.dealers.map(d => (
-                <div key={d._id} style={{ padding:'0.8rem 1.25rem', borderBottom:'1px solid #1a1a1a',
-                  display:'flex', justifyContent:'space-between', alignItems:'center', gap:'1rem' }}>
-                  <div style={{ minWidth:0 }}>
-                    <div style={{ color:'#ececec', fontSize:'0.85rem', fontWeight:600,
-                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {d.businessName}
-                    </div>
-                    <div style={{ color:'#555', fontSize:'0.75rem', marginTop:2 }}>
-                      {d.user?.name} · {d.region}
-                    </div>
-                  </div>
-                  <button onClick={() => approveDealer(d._id)} disabled={approving[d._id]}
-                    style={{ background:'#c41e2a', color:'#0d0d0d', border:'none', borderRadius:5,
-                      padding:'4px 12px', fontSize:'0.78rem', fontWeight:700, cursor:'pointer',
-                      opacity: approving[d._id] ? 0.5 : 1, flexShrink:0 }}>
-                    {approving[d._id] ? '…' : 'Approve'}
-                  </button>
-                </div>
-              ))}
-          </div>
-
-          {/* Pending listings */}
-          <div style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10, overflow:'hidden' }}>
-            <div style={{ padding:'0.9rem 1.25rem', borderBottom:'1px solid #1e1e1e',
-              display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ color:'#ececec', fontWeight:700, fontSize:'0.88rem' }}>
-                Pending Listings
-              </span>
-              <Link to="/admin/listings?approved=false" style={{ color:'#c41e2a', fontSize:'0.78rem' }}>
-                View all
-              </Link>
-            </div>
-            {loading ? <div style={{ padding:'2rem', color:'#333', textAlign:'center' }}>Loading…</div>
-            : pending.listings.length === 0
-              ? <div style={{ padding:'2rem', color:'#444', textAlign:'center', fontSize:'0.85rem' }}>
-                  No pending listings ✓
-                </div>
-              : pending.listings.map(l => (
-                <div key={l._id} style={{ padding:'0.8rem 1.25rem', borderBottom:'1px solid #1a1a1a',
-                  display:'flex', justifyContent:'space-between', alignItems:'center', gap:'1rem' }}>
-                  <div style={{ minWidth:0 }}>
-                    <div style={{ color:'#ececec', fontSize:'0.85rem', fontWeight:600,
-                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {l.title}
-                    </div>
-                    <div style={{ color:'#555', fontSize:'0.75rem', marginTop:2 }}>
-                      {l.dealer?.businessName} · {l.region}
-                    </div>
-                  </div>
-                  <button onClick={() => approveListing(l._id)} disabled={approving[l._id]}
-                    style={{ background:'#c41e2a', color:'#0d0d0d', border:'none', borderRadius:5,
-                      padding:'4px 12px', fontSize:'0.78rem', fontWeight:700, cursor:'pointer',
-                      opacity: approving[l._id] ? 0.5 : 1, flexShrink:0 }}>
-                    {approving[l._id] ? '…' : 'Approve'}
-                  </button>
-                </div>
-              ))}
-          </div>
-
-          {/* Quick links */}
-          <div style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10,
-            padding:'1.1rem', display:'flex', flexDirection:'column', gap:'0.6rem', minWidth:180 }}>
-            <div style={{ color:'#555', fontSize:'0.72rem', fontWeight:700,
-              textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Quick Links</div>
-            {QUICK_LINKS.map(([to, label, icon]) => (
-              <Link key={to} to={to}
-                style={{ display:'flex', alignItems:'center', gap:8, background:'#1a1a1a',
-                  border:'1px solid #2a2a2a', borderRadius:6, padding:'0.55rem 0.9rem',
-                  color:'#ccc', fontSize:'0.84rem', textDecoration:'none',
-                  transition:'border-color 0.15s' }}
-                onMouseEnter={e=>e.currentTarget.style.borderColor='#c41e2a44'}
-                onMouseLeave={e=>e.currentTarget.style.borderColor='#2a2a2a'}>
-                <span style={{ color:'#c41e2a' }}>{icon}</span> {label}
-              </Link>
-            ))}
-          </div>
-        </div>
+      <div className="mb-8" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 'var(--sp-4)' }}>
+        <Stat label="Pending dealers" value={stats?.pendingDealers} loading={loading} attention to="/admin/dealers?approved=false" />
+        <Stat label="Pending listings" value={stats?.pendingListings} loading={loading} attention to="/admin/listings?approved=false" />
+        <Stat label="Dealers" value={stats?.totalDealers} loading={loading} to="/admin/dealers" />
+        <Stat label="Listings" value={stats?.totalListings} loading={loading} to="/admin/listings" />
+        <Stat label="Users" value={stats?.totalUsers} loading={loading} to="/admin/users" />
+        <Stat label="Enquiries" value={stats?.totalEnquiries} loading={loading} />
+        <Stat label="Active boosts" value={stats?.activeBoosts} loading={loading} to="/admin/boosts" />
       </div>
-      <style>{`@media(max-width:900px){.dash-grid{grid-template-columns:1fr!important}}`}</style>
+
+      <div className="grid-2" style={{ gap: 'var(--sp-6)', alignItems: 'start' }}>
+        <Queue
+          title="Dealers awaiting approval"
+          to="/admin/dealers?approved=false"
+          loading={loading}
+          items={pending.dealers}
+          empty="No dealers are waiting for review."
+          render={(d) => (
+            <li key={d._id} className="row between gap-4" style={rowStyle}>
+              <div className="grow">
+                <Link to={`/admin/dealers/${d._id}`} className="truncate" style={{ display: 'block', fontWeight: 600, color: 'var(--color-text)' }}>{d.businessName}</Link>
+                <div className="text-xs muted mt-2">{[d.user?.name, d.region].filter(Boolean).join(' · ')}</div>
+              </div>
+              <ApproveBtn kind="dealers" id={d._id} label={d.businessName} />
+            </li>
+          )}
+        />
+        <Queue
+          title="Listings awaiting approval"
+          to="/admin/listings?approved=false"
+          loading={loading}
+          items={pending.listings}
+          empty="No listings are waiting for review."
+          render={(l) => (
+            <li key={l._id} className="row between gap-4" style={rowStyle}>
+              <div className="grow">
+                <Link to={`/admin/listings/${l._id}`} className="truncate" style={{ display: 'block', fontWeight: 600, color: 'var(--color-text)' }}>{l.title}</Link>
+                <div className="text-xs muted mt-2">{[l.dealer?.businessName, l.region].filter(Boolean).join(' · ')}</div>
+              </div>
+              <ApproveBtn kind="listings" id={l._id} label={l.title} />
+            </li>
+          )}
+        />
+      </div>
     </AdminLayout>
   );
 }

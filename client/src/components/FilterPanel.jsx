@@ -1,91 +1,56 @@
-const REGIONS = ['Greater Accra','Ashanti','Western','Eastern','Central','Northern',
-  'Upper East','Upper West','Volta','Bono','Bono East','Ahafo','Savannah','North East','Oti','Western North'];
-const CONDITIONS   = ['new','foreign used','locally used'];
-const TRANSMISSIONS = ['automatic','manual'];
-const FUEL_TYPES   = ['petrol','diesel','electric','hybrid'];
-const BODY_TYPES   = ['sedan','suv','pickup','hatchback','coupe','van','bus','convertible','truck'];
+import { REGIONS, CONDITIONS, TRANSMISSIONS, FUEL_TYPES, BODY_TYPES } from '../utils/options';
 
-const label = { display:'block', color:'#888', fontSize:'0.78rem', marginBottom:5,
-  fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 };
-const inp = { width:'100%', background:'#1a1a1a', border:'1px solid #2a2a2a', borderRadius:6,
-  padding:'0.55rem 0.75rem', color:'#ececec', fontSize:'0.85rem', outline:'none', boxSizing:'border-box' };
-const sel = { ...inp, cursor:'pointer' };
+const Select = ({ id, label, value, onChange, options, any = 'Any' }) => (
+  <div className="field">
+    <label className="label-caps" htmlFor={id}>{label}</label>
+    <select id={id} className="select" value={value || ''} onChange={onChange} style={{ textTransform: 'capitalize' }}>
+      <option value="">{any}</option>
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  </div>
+);
 
 export default function FilterPanel({ filters, onChange, onClear }) {
   const set = (key) => (e) => onChange({ ...filters, [key]: e.target.value });
+  const active = Object.values(filters).filter(Boolean).length;
 
   return (
-    <div style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10, padding:'1.25rem' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.25rem' }}>
-        <span style={{ color:'#ececec', fontWeight:700, fontSize:'0.9rem' }}>Filters</span>
-        <button onClick={onClear} style={{ background:'none', border:'none', color:'#666',
-          fontSize:'0.78rem', cursor:'pointer', textDecoration:'underline' }}>
-          Clear all
-        </button>
+    <div className="card card-pad-sm">
+      <div className="row between mb-4">
+        <span className="card-title">
+          Filters {active > 0 && <span className="badge badge-red" style={{ marginLeft: 6 }}>{active}</span>}
+        </span>
+        <button type="button" onClick={onClear} className="btn btn-ghost btn-sm" disabled={!active}>Clear all</button>
       </div>
 
-      <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
-        <div>
-          <label style={label}>Make</label>
-          <input value={filters.make||''} onChange={set('make')} placeholder="e.g. Toyota" style={inp} />
+      <div className="stack gap-4">
+        <div className="field">
+          <label className="label-caps" htmlFor="f-make">Make</label>
+          <input id="f-make" className="input" value={filters.make || ''} onChange={set('make')} placeholder="e.g. Toyota" />
         </div>
-        <div>
-          <label style={label}>Model</label>
-          <input value={filters.model||''} onChange={set('model')} placeholder="e.g. Camry" style={inp} />
+        <div className="field">
+          <label className="label-caps" htmlFor="f-model">Model</label>
+          <input id="f-model" className="input" value={filters.model || ''} onChange={set('model')} placeholder="e.g. Camry" />
         </div>
-        <div>
-          <label style={label}>Year</label>
-          <div style={{ display:'flex', gap:6 }}>
-            <input type="number" value={filters.yearMin||''} onChange={set('yearMin')}
-              placeholder="From" style={{ ...inp, width:'50%' }} />
-            <input type="number" value={filters.yearMax||''} onChange={set('yearMax')}
-              placeholder="To" style={{ ...inp, width:'50%' }} />
+        <fieldset className="field" style={{ border: 0 }}>
+          <legend className="label-caps" style={{ marginBottom: '.4rem' }}>Year</legend>
+          <div className="row gap-2">
+            <input type="number" inputMode="numeric" className="input" aria-label="Year from" value={filters.yearMin || ''} onChange={set('yearMin')} placeholder="From" />
+            <input type="number" inputMode="numeric" className="input" aria-label="Year to" value={filters.yearMax || ''} onChange={set('yearMax')} placeholder="To" />
           </div>
-        </div>
-        <div>
-          <label style={label}>Price (GHS)</label>
-          <div style={{ display:'flex', gap:6 }}>
-            <input type="number" value={filters.minPrice||''} onChange={set('minPrice')}
-              placeholder="Min" style={{ ...inp, width:'50%' }} />
-            <input type="number" value={filters.maxPrice||''} onChange={set('maxPrice')}
-              placeholder="Max" style={{ ...inp, width:'50%' }} />
+        </fieldset>
+        <fieldset className="field" style={{ border: 0 }}>
+          <legend className="label-caps" style={{ marginBottom: '.4rem' }}>Price (GHS)</legend>
+          <div className="row gap-2">
+            <input type="number" inputMode="numeric" className="input" aria-label="Minimum price" value={filters.minPrice || ''} onChange={set('minPrice')} placeholder="Min" />
+            <input type="number" inputMode="numeric" className="input" aria-label="Maximum price" value={filters.maxPrice || ''} onChange={set('maxPrice')} placeholder="Max" />
           </div>
-        </div>
-        <div>
-          <label style={label}>Region</label>
-          <select value={filters.region||''} onChange={set('region')} style={sel}>
-            <option value="">All Regions</option>
-            {REGIONS.map(r=><option key={r} value={r}>{r}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={label}>Condition</label>
-          <select value={filters.condition||''} onChange={set('condition')} style={sel}>
-            <option value="">Any</option>
-            {CONDITIONS.map(c=><option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={label}>Transmission</label>
-          <select value={filters.transmission||''} onChange={set('transmission')} style={sel}>
-            <option value="">Any</option>
-            {TRANSMISSIONS.map(t=><option key={t} value={t} style={{textTransform:'capitalize'}}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={label}>Fuel Type</label>
-          <select value={filters.fuelType||''} onChange={set('fuelType')} style={sel}>
-            <option value="">Any</option>
-            {FUEL_TYPES.map(f=><option key={f} value={f} style={{textTransform:'capitalize'}}>{f}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={label}>Body Type</label>
-          <select value={filters.bodyType||''} onChange={set('bodyType')} style={sel}>
-            <option value="">Any</option>
-            {BODY_TYPES.map(b=><option key={b} value={b} style={{textTransform:'capitalize'}}>{b}</option>)}
-          </select>
-        </div>
+        </fieldset>
+        <Select id="f-region" label="Region" value={filters.region} onChange={set('region')} options={REGIONS} any="All regions" />
+        <Select id="f-cond" label="Condition" value={filters.condition} onChange={set('condition')} options={CONDITIONS} />
+        <Select id="f-trans" label="Transmission" value={filters.transmission} onChange={set('transmission')} options={TRANSMISSIONS} />
+        <Select id="f-fuel" label="Fuel type" value={filters.fuelType} onChange={set('fuelType')} options={FUEL_TYPES} />
+        <Select id="f-body" label="Body type" value={filters.bodyType} onChange={set('bodyType')} options={BODY_TYPES} />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import DealerLayout from './DealerLayout';
 import ListingForm from './ListingForm';
+import { PageHeader } from '../../components/DashboardShell';
 import axiosInstance from '../../api/axiosInstance';
 
 export default function DealerCreateListing() {
@@ -12,13 +13,11 @@ export default function DealerCreateListing() {
   const handleSubmit = async (formData) => {
     setLoading(true);
     try {
-      await axiosInstance.post('/listings', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      toast.success('Listing submitted — pending admin approval');
+      await axiosInstance.post('/listings', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      toast.success('Listing submitted for review');
       navigate('/dealer/listings');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create listing');
+      toast.error(err.response?.data?.message || 'The listing could not be created');
     } finally {
       setLoading(false);
     }
@@ -26,14 +25,13 @@ export default function DealerCreateListing() {
 
   return (
     <DealerLayout>
-      <div style={{ maxWidth:760, margin:'0 auto' }}>
-        <h1 style={{ color:'#ececec', fontSize:'1.4rem', fontWeight:700, marginBottom:'0.4rem' }}>
-          Add New Listing
-        </h1>
-        <p style={{ color:'#666', fontSize:'0.85rem', marginBottom:'1.5rem' }}>
-          Your listing will be reviewed by an admin before going live.
-        </p>
-        <ListingForm onSubmit={handleSubmit} submitLabel="Submit for Review" loading={loading} />
+      <div style={{ maxWidth: 860 }}>
+        <PageHeader
+          back={{ to: '/dealer/listings', label: 'My listings' }}
+          title="Add a listing"
+          subtitle="An admin reviews each listing before it goes live."
+        />
+        <ListingForm onSubmit={handleSubmit} submitLabel="Submit for review" loading={loading} />
       </div>
     </DealerLayout>
   );

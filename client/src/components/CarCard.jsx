@@ -1,77 +1,79 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import BoostBadge from './BoostBadge';
-
+import Icon from './Icon';
 import { getPlaceholder } from '../utils/placeholder';
+
 const PLACEHOLDER = getPlaceholder(400, 260);
 
-const fmt = (n, currency) =>
-  currency === 'USD'
-    ? `$${Number(n).toLocaleString()}`
-    : `GHS ${Number(n).toLocaleString()}`;
+export const cap = (t) => String(t || '').replace(/\b\w/g, (c) => c.toUpperCase());
 
+export const fmtPrice = (n, currency) =>
+  currency === 'USD' ? `$${Number(n).toLocaleString()}` : `GHS ${Number(n).toLocaleString()}`;
+
+// A real link (not a div with onClick) so cards are keyboard-reachable,
+// open in a new tab with ctrl/cmd-click, and are announced as links.
 export default function CarCard({ listing }) {
-  const navigate = useNavigate();
   const img = listing.images?.[0] || PLACEHOLDER;
+  const specs = [
+    listing.year && { icon: 'calendar', text: listing.year },
+    listing.mileage && { icon: 'gauge', text: `${Number(listing.mileage).toLocaleString()} ${listing.mileageUnit || 'km'}` },
+    listing.transmission && { icon: 'cog', text: cap(listing.transmission) },
+  ].filter(Boolean);
 
   return (
-    <div onClick={() => navigate(`/listings/${listing._id}`)}
-      style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10,
-        overflow:'hidden', cursor:'pointer', transition:'transform 0.18s,border-color 0.18s',
-        display:'flex', flexDirection:'column' }}
-      onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.borderColor='#c41e2a44';}}
-      onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.borderColor='#2a2a2a';}}>
-
-      {/* Image */}
-      <div style={{ position:'relative', aspectRatio:'16/10', overflow:'hidden', background:'#0d0d0d' }}>
-        <img src={img} alt={listing.title}
-          style={{ width:'100%', height:'100%', objectFit:'cover' }}
-          onError={e=>{e.target.src=PLACEHOLDER;}} />
-        {listing.isBoosted && (
-          <div style={{ position:'absolute', top:8, left:8 }}><BoostBadge /></div>
-        )}
-        <div style={{ position:'absolute', bottom:8, right:8, background:'rgba(0,0,0,0.7)',
-          color:'#fff', fontSize:'0.72rem', padding:'2px 7px', borderRadius:4 }}>
-          {listing.condition}
-        </div>
+    <Link to={`/listings/${listing._id}`} className="car-card">
+      <div className="car-card-media">
+        <img
+          src={img}
+          alt={listing.title}
+          loading="lazy"
+          decoding="async"
+          onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+        />
+        {listing.isBoosted && <div className="car-card-flag"><BoostBadge /></div>}
+        {listing.condition && <span className="car-card-cond">{cap(listing.condition)}</span>}
       </div>
 
-      {/* Body */}
-      <div style={{ padding:'0.9rem', flex:1, display:'flex', flexDirection:'column', gap:6 }}>
-        <div style={{ fontWeight:700, fontSize:'0.95rem', color:'#ececec',
-          whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-          {listing.title}
-        </div>
-
-        <div style={{ color:'#c41e2a', fontWeight:800, fontSize:'1.05rem' }}>
-          {fmt(listing.price, listing.currency)}
-        </div>
-
-        <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem', marginTop:2 }}>
-          {[
-            listing.year,
-            listing.mileage ? `${Number(listing.mileage).toLocaleString()} ${listing.mileageUnit || 'km'}` : null,
-            listing.transmission,
-          ].filter(Boolean).map((tag, i) => (
-            <span key={i} style={{ background:'#1e1e1e', color:'#aaa', fontSize:'0.72rem',
-              padding:'2px 8px', borderRadius:4 }}>
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          marginTop:'auto', paddingTop:8, borderTop:'1px solid #1e1e1e' }}>
-          <div style={{ color:'#666', fontSize:'0.78rem', display:'flex', alignItems:'center', gap:4 }}>
-            📍 {listing.region || 'Ghana'}
+      <div className="car-card-body">
+        <div className="car-card-title truncate" title={listing.title}>{listing.title}</div>
+        <div className="car-card-price">{fmtPrice(listing.price, listing.currency)}</div>
+        {specs.length > 0 && (
+          <div className="car-card-specs">
+            {specs.map((s) => (
+              <span key={s.icon} className="chip">
+                <Icon name={s.icon} /> {s.text}
+              </span>
+            ))}
           </div>
+        )}
+        <div className="car-card-foot">
+          <span className="where truncate"><Icon name="pin" /> {listing.region || 'Ghana'}</span>
           {listing.dealer && (
-            <div style={{ color:'#888', fontSize:'0.75rem', display:'flex', alignItems:'center', gap:4 }}>
-              {listing.dealer.businessName}
+            <span className="row gap-1 truncate" style={{ minWidth: 0 }}>
+              <span className="truncate">{listing.dealer.businessName}</span>
               {listing.dealer.isVerified && (
-                <span title="Verified Dealer" style={{ color:'#c41e2a', fontSize:'0.75rem' }}>✓</span>
+                <span className="verified" title="Verified dealer">
+                  <Icon name="checkCircle" label="Verified dealer" />
+                </span>
               )}
-            </div>
+            </span>
           )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export function CarCardSkeleton() {
+  return (
+    <div className="car-card" aria-hidden="true">
+      <div className="car-card-media skeleton" style={{ borderRadius: 0 }} />
+      <div className="car-card-body">
+        <div className="skeleton" style={{ height: 16, width: '72%' }} />
+        <div className="skeleton" style={{ height: 22, width: '44%' }} />
+        <div className="row gap-2">
+          <div className="skeleton" style={{ height: 24, width: 64 }} />
+          <div className="skeleton" style={{ height: 24, width: 80 }} />
         </div>
       </div>
     </div>

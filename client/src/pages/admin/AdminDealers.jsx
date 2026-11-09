@@ -1,189 +1,164 @@
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
+import Icon from '../../components/Icon';
+import Pagination from '../../components/Pagination';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { PageHeader, TableSkeleton, EmptyState } from '../../components/DashboardShell';
 import axiosInstance from '../../api/axiosInstance';
 
 const FILTERS = [
-  { label:'All',       value:''      },
-  { label:'Pending',   value:'false' },
-  { label:'Approved',  value:'true'  },
+  { label: 'All', value: '' },
+  { label: 'Pending', value: 'false' },
+  { label: 'Approved', value: 'true' },
 ];
-
-const TIER_COLOR = { basic:'#666', pro:'#c41e2a', premium:'#e8a0a6' };
-
-const Badge = ({ label, bg, color }) => (
-  <span style={{ background:bg, color, fontSize:'0.7rem', padding:'2px 8px',
-    borderRadius:4, fontWeight:700, textTransform:'uppercase' }}>{label}</span>
-);
-
-const ActionBtn = ({ label, onClick, color='#ccc', bg='#1e1e1e', disabled }) => (
-  <button onClick={onClick} disabled={disabled}
-    style={{ background:bg, border:'1px solid #2a2a2a', color, borderRadius:4,
-      padding:'3px 10px', fontSize:'0.75rem', cursor: disabled?'not-allowed':'pointer',
-      opacity: disabled?0.4:1, fontWeight:600 }}>
-    {label}
-  </button>
-);
+const TIER_BADGE = { basic: '', pro: 'badge-red', premium: 'badge-solid' };
+const LIMIT = 20;
 
 export default function AdminDealers() {
-  const navigate = useNavigate();
-  const [dealers,  setDealers]  = useState([]);
-  const [filter,   setFilter]   = useState('');
-  const [loading,  setLoading]  = useState(true);
-  const [page,     setPage]     = useState(1);
-  const [total,    setTotal]    = useState(0);
-  const [acting,   setActing]   = useState({});
-  const LIMIT = 20;
+  const [params, setParams] = useSearchParams();
+  const [dealers, setDealers] = useState([]);
+  // Honour ?approved= so the dashboard's "View all" links land on the right tab
+  const [filter, setFilter] = useState(params.get('approved') || '');
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [acting, setActing] = useState({});
+  const [confirm, setConfirm] = useState(null);
 
-  const fetch = useCallback(async (p=1, f=filter) => {
+  const load = useCallback(async (p, f) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page:p, limit:LIMIT });
-      if (f !== '') params.set('approved', f);
-      const { data } = await axiosInstance.get(`/admin/dealers?${params}`);
+      const q = new URLSearchParams({ page: p, limit: LIMIT });
+      if (f !== '') q.set('approved', f);
+      const { data } = await axiosInstance.get(`/admin/dealers?${q}`);
       setDealers(data.dealers || []);
       setTotal(data.total || 0);
-    } catch { toast.error('Failed to load dealers'); }
-    finally  { setLoading(false); }
-  }, [filter]);
+    } catch {
+      toast.error('Dealers could not be loaded');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetch(page, filter); }, [page, filter]);
+  useEffect(() => { load(page, filter); }, [page, filter, load]);
 
-  const act = async (id, endpoint, successMsg, update) => {
-    setActing(p => ({ ...p, [id]: endpoint }));
-    try {
-      await axiosInstance.put(`/admin/dealers/${id}/${endpoint}`);
-      setDealers(prev => prev.map(d => d._id === id ? { ...d, ...update } : d));
-      toast.success(successMsg);
-    } catch (err) { toast.error(err.response?.data?.message || 'Action failed'); }
-    finally { setActing(p => ({ ...p, [id]: null })); }
+  const changeFilter = (v) => {
+    setFilter(v);
+    setPage(1);
+    setParams(v ? { approved: v } : {}, { replace: true });
   };
 
-  const totalPages = Math.ceil(total / LIMIT);
+  const act = async (id, endpoint, successMsg, update) => {
+    setActing((p) => ({ ...p, [id]: endpoint }));
+    try {
+      await axiosInstance.put(`/admin/dealers/${id}/${endpoint}`);
+      setDealers((prev) => prev.map((d) => (d._id === id ? { ...d, ...update } : d)));
+      toast.success(successMsg);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Action failed');
+    } finally {
+      setActing((p) => ({ ...p, [id]: null }));
+      setConfirm(null);
+    }
+  };
+
+  const busy = (d, ep) => acting[d._id] === ep;
 
   return (
     <AdminLayout>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem', flexWrap:'wrap', gap:'1rem' }}>
-        <div>
-          <h1 style={{ color:'#ececec', fontSize:'1.4rem', fontWeight:700 }}>Dealers</h1>
-          <div style={{ color:'#555', fontSize:'0.8rem', marginTop:3 }}>{total} total</div>
-        </div>
-        <div style={{ display:'flex', gap:'0.5rem' }}>
-          {FILTERS.map(f => (
-            <button key={f.value} onClick={() => { setFilter(f.value); setPage(1); }}
-              style={{ background: filter===f.value ? '#c41e2a' : '#1a1a1a',
-                color: filter===f.value ? '#0d0d0d' : '#888',
-                border:'1px solid #2a2a2a', borderRadius:6,
-                padding:'0.45rem 0.9rem', fontSize:'0.82rem', cursor:'pointer',
-                fontWeight: filter===f.value ? 700 : 400 }}>
-              {f.label}
-            </button>
+      <PageHeader title="Dealers" subtitle={loading ? 'Loading…' : `${total} ${total === 1 ? 'dealer' : 'dealers'}`} />
+
+      <div className="row wrap between gap-3 mb-4">
+        <div className="seg" role="tablist" aria-label="Filter dealers">
+          {FILTERS.map((f) => (
+            <button key={f.value} type="button" role="tab" aria-selected={filter === f.value} className={filter === f.value ? 'is-active' : ''} onClick={() => changeFilter(f.value)}>{f.label}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ background:'#141414', border:'1px solid #2a2a2a', borderRadius:10, overflow:'hidden' }}>
-        {loading ? <div style={{ padding:'3rem', textAlign:'center', color:'#444' }}>Loading…</div>
-        : dealers.length === 0
-          ? <div style={{ padding:'3rem', textAlign:'center', color:'#555' }}>No dealers found.</div>
-          : <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom:'1px solid #2a2a2a' }}>
-                    {['Dealer','Owner','Region','Tier','Status','Actions'].map(h => (
-                      <th key={h} style={{ padding:'0.7rem 1rem', color:'#555', fontSize:'0.72rem',
-                        fontWeight:700, textTransform:'uppercase', letterSpacing:0.5,
-                        textAlign:'left', whiteSpace:'nowrap' }}>{h}</th>
-                    ))}
+      <div className="card">
+        {loading ? <TableSkeleton rows={6} cols={5} /> : dealers.length === 0 ? (
+          <EmptyState icon="store" title="No dealers here">{filter === 'false' ? 'Nobody is waiting for approval.' : 'No dealers match this filter.'}</EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Dealer</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">Region</th>
+                  <th scope="col">Plan</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dealers.map((d) => (
+                  <tr key={d._id}>
+                    <td>
+                      <Link to={`/admin/dealers/${d._id}`} className="row gap-3" style={{ color: 'inherit' }}>
+                        {d.logo
+                          ? <img src={d.logo} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                          : <span className="avatar" style={{ width: 36, height: 36 }}>{d.businessName?.[0]}</span>}
+                        <div style={{ minWidth: 0 }}>
+                          <div className="strong truncate" style={{ maxWidth: 220 }}>{d.businessName}</div>
+                          {d.businessAddress && <div className="text-xs muted truncate" style={{ maxWidth: 220 }}>{d.businessAddress}</div>}
+                        </div>
+                      </Link>
+                    </td>
+                    <td>
+                      <div>{d.user?.name}</div>
+                      <div className="text-xs muted">{d.user?.email}</div>
+                    </td>
+                    <td>{d.region}</td>
+                    <td><span className={`badge ${TIER_BADGE[d.subscriptionTier || 'basic']}`} style={{ textTransform: 'capitalize' }}>{d.subscriptionTier || 'basic'}</span></td>
+                    <td>
+                      <div className="row wrap gap-1">
+                        <span className={`badge ${d.isApproved ? 'badge-success' : 'badge-warning'}`}>{d.isApproved ? 'Approved' : 'Pending'}</span>
+                        {d.isVerified && <span className="badge badge-red"><Icon name="checkCircle" /> Verified</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
+                        {!d.isApproved && (
+                          <button type="button" className="btn btn-success btn-sm" disabled={!!acting[d._id]} onClick={() => act(d._id, 'approve', 'Dealer approved', { isApproved: true })}>
+                            {busy(d, 'approve') ? <span className="spinner" /> : 'Approve'}
+                          </button>
+                        )}
+                        {!d.isVerified && (
+                          <button type="button" className="btn btn-secondary btn-sm" disabled={!!acting[d._id]} onClick={() => act(d._id, 'verify', 'Dealer verified', { isVerified: true })}>
+                            {busy(d, 'verify') ? <span className="spinner" /> : 'Verify'}
+                          </button>
+                        )}
+                        {d.isApproved ? (
+                          <button type="button" className="btn btn-danger btn-sm" disabled={!!acting[d._id]} onClick={() => setConfirm({ d, ep: 'suspend', title: 'Suspend this dealer?', msg: 'Dealer suspended', label: 'Suspend' })}>Suspend</button>
+                        ) : (
+                          <button type="button" className="btn btn-danger btn-sm" disabled={!!acting[d._id]} onClick={() => setConfirm({ d, ep: 'reject', title: 'Reject this dealer?', msg: 'Dealer rejected', label: 'Reject' })}>Reject</button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {dealers.map(d => (
-                    <tr key={d._id} style={{ borderBottom:'1px solid #1a1a1a', cursor:'pointer' }}
-                      onClick={() => navigate(`/admin/dealers/${d._id}`)}
-                      onMouseEnter={e=>e.currentTarget.style.background='#181818'}
-                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                      <td style={{ padding:'0.8rem 1rem' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                          {d.logo
-                            ? <img src={d.logo} alt="" style={{ width:36, height:36, borderRadius:'50%',
-                                objectFit:'cover', border:'1px solid #2a2a2a', flexShrink:0 }} />
-                            : <div style={{ width:36, height:36, borderRadius:'50%', background:'#1e1e1e',
-                                display:'flex', alignItems:'center', justifyContent:'center',
-                                color:'#c41e2a', fontWeight:800, fontSize:'0.85rem',
-                                border:'1px solid #2a2a2a', flexShrink:0 }}>
-                                {d.businessName?.[0]}
-                              </div>}
-                          <div>
-                            <span style={{ color:'#ececec', fontSize:'0.85rem', fontWeight:600 }}>
-                              {d.businessName}
-                              {d.isVerified && <span style={{ color:'#c41e2a', marginLeft:5, fontSize:'0.72rem' }}>✓</span>}
-                            </span>
-                            <div style={{ color:'#555', fontSize:'0.72rem' }}>{d.businessAddress}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding:'0.8rem 1rem', color:'#888', fontSize:'0.82rem' }}>
-                        {d.user?.name}<br />
-                        <span style={{ color:'#444', fontSize:'0.72rem' }}>{d.user?.email}</span>
-                      </td>
-                      <td style={{ padding:'0.8rem 1rem', color:'#888', fontSize:'0.82rem' }}>{d.region}</td>
-                      <td style={{ padding:'0.8rem 1rem' }}>
-                        <span style={{ color: TIER_COLOR[d.subscriptionTier] || '#888',
-                          fontSize:'0.75rem', fontWeight:700, textTransform:'capitalize' }}>
-                          {d.subscriptionTier}
-                        </span>
-                      </td>
-                      <td style={{ padding:'0.8rem 1rem' }}>
-                        {d.isApproved
-                          ? <Badge label="Approved"  bg="#52c07a22" color="#52c07a" />
-                          : <Badge label="Pending"   bg="#c41e2a22" color="#c41e2a" />}
-                      </td>
-                      <td style={{ padding:'0.8rem 1rem' }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display:'flex', gap:'0.4rem', flexWrap:'wrap' }}>
-                          {!d.isApproved && (
-                            <ActionBtn label={acting[d._id]==='approve'?'…':'Approve'}
-                              onClick={() => act(d._id,'approve','Dealer approved',{ isApproved:true })}
-                              bg="#c41e2a" color="#0d0d0d" disabled={!!acting[d._id]} />
-                          )}
-                          {d.isApproved && (
-                            <ActionBtn label={acting[d._id]==='suspend'?'…':'Suspend'}
-                              onClick={() => act(d._id,'suspend','Dealer suspended',{ isApproved:false })}
-                              color="#e05252" disabled={!!acting[d._id]} />
-                          )}
-                          {!d.isVerified && (
-                            <ActionBtn label={acting[d._id]==='verify'?'…':'Verify'}
-                              onClick={() => act(d._id,'verify','Dealer verified',{ isVerified:true })}
-                              color="#52c07a" disabled={!!acting[d._id]} />
-                          )}
-                          <ActionBtn label={acting[d._id]==='reject'?'…':'Reject'}
-                            onClick={() => act(d._id,'reject','Dealer rejected',{ isApproved:false })}
-                            color="#666" disabled={!!acting[d._id]} />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {totalPages > 1 && !loading && (
-        <div style={{ display:'flex', gap:'0.5rem', marginTop:'1.25rem', flexWrap:'wrap' }}>
-          {Array.from({ length:totalPages },(_,i)=>i+1).map(p => (
-            <button key={p} onClick={() => setPage(p)}
-              style={{ width:36, height:36, borderRadius:6, border:'1px solid',
-                borderColor: p===page?'#c41e2a':'#2a2a2a',
-                background:  p===page?'#c41e2a':'#1a1a1a',
-                color:       p===page?'#0d0d0d':'#ccc',
-                cursor:'pointer', fontSize:'0.85rem' }}>
-              {p}
-            </button>
-          ))}
-        </div>
-      )}
+      {!loading && <Pagination page={page} totalPages={Math.ceil(total / LIMIT)} onChange={setPage} />}
+
+      <ConfirmDialog
+        open={!!confirm}
+        danger
+        busy={confirm ? !!acting[confirm.d._id] : false}
+        title={confirm?.title}
+        body={confirm ? `${confirm.d.businessName}'s listings will stop showing to buyers.` : ''}
+        confirmLabel={confirm?.label}
+        onConfirm={() => act(confirm.d._id, confirm.ep, confirm.msg, { isApproved: false })}
+        onCancel={() => setConfirm(null)}
+      />
     </AdminLayout>
   );
 }

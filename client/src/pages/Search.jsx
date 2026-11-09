@@ -2,66 +2,53 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import CarCard from '../components/CarCard';
+import CarCard, { CarCardSkeleton } from '../components/CarCard';
 import FilterPanel from '../components/FilterPanel';
+import Pagination from '../components/Pagination';
+import Icon from '../components/Icon';
 import axiosInstance from '../api/axiosInstance';
 
 const SORT_OPTIONS = [
-  { value: 'createdAt_desc',  label: 'Newest First' },
-  { value: 'price_asc',       label: 'Price: Low to High' },
-  { value: 'price_desc',      label: 'Price: High to Low' },
-  { value: 'views_desc',      label: 'Most Viewed' },
+  { value: 'createdAt_desc', label: 'Newest first' },
+  { value: 'price_asc', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
+  { value: 'views_desc', label: 'Most viewed' },
 ];
-
-const Skeleton = () => (
-  <div style={{ background:'#141414', border:'1px solid #1e1e1e', borderRadius:10, overflow:'hidden' }}>
-    <div style={{ aspectRatio:'16/10', background:'#1e1e1e', animation:'pulse 1.4s infinite' }} />
-    <div style={{ padding:'0.9rem', display:'flex', flexDirection:'column', gap:8 }}>
-      <div style={{ height:14, background:'#1e1e1e', borderRadius:4, width:'70%' }} />
-      <div style={{ height:18, background:'#1e1e1e', borderRadius:4, width:'45%' }} />
-    </div>
-  </div>
-);
+const FILTER_KEYS = ['make', 'model', 'region', 'bodyType', 'condition', 'transmission', 'fuelType', 'minPrice', 'maxPrice', 'yearMin', 'yearMax'];
+const EMPTY = Object.fromEntries(FILTER_KEYS.map((k) => [k, '']));
+const LIMIT = 20;
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState([]);
-  const [total,    setTotal]    = useState(0);
-  const [loading,  setLoading]  = useState(true);
-  const [page,     setPage]     = useState(1);
-  const [sort,     setSort]     = useState('createdAt_desc');
-  const [showFilter, setShowFilter] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState('createdAt_desc');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState(() =>
+    Object.fromEntries(FILTER_KEYS.map((k) => [k, searchParams.get(k) || ''])));
 
-  const [filters, setFilters] = useState({
-    make:         searchParams.get('make')         || '',
-    model:        searchParams.get('model')        || '',
-    region:       searchParams.get('region')       || '',
-    bodyType:     searchParams.get('bodyType')     || '',
-    condition:    searchParams.get('condition')    || '',
-    transmission: searchParams.get('transmission') || '',
-    fuelType:     searchParams.get('fuelType')     || '',
-    minPrice:     searchParams.get('minPrice')     || '',
-    maxPrice:     searchParams.get('maxPrice')     || '',
-    yearMin:      searchParams.get('yearMin')      || '',
-    yearMax:      searchParams.get('yearMax')      || '',
-  });
-
-  const LIMIT = 20;
   const totalPages = Math.ceil(total / LIMIT);
+  const activeCount = Object.values(filters).filter(Boolean).length;
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: LIMIT });
-      Object.entries(filters).forEach(([k,v]) => { if (v) params.set(k, v); });
+      Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
       const [sortField, sortDir] = sort.split('_');
       params.set('sortField', sortField);
-      params.set('sortDir',   sortDir);
+      params.set('sortDir', sortDir);
       const { data } = await axiosInstance.get(`/listings?${params}`);
       setListings(data.listings);
       setTotal(data.total);
-    } catch { setListings([]); }
-    finally  { setLoading(false); }
+    } catch {
+      setListings([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
   }, [filters, page, sort]);
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
@@ -70,94 +57,72 @@ export default function Search() {
     setFilters(next);
     setPage(1);
     const p = new URLSearchParams();
-    Object.entries(next).forEach(([k,v]) => { if (v) p.set(k,v); });
-    setSearchParams(p);
+    Object.entries(next).forEach(([k, v]) => { if (v) p.set(k, v); });
+    setSearchParams(p, { replace: true });
   };
 
-  const clearFilters = () => handleFilters({
-    make:'',model:'',region:'',bodyType:'',condition:'',
-    transmission:'',fuelType:'',minPrice:'',maxPrice:'',yearMin:'',yearMax:'',
-  });
+  const goToPage = (p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0d0d0d', display:'flex', flexDirection:'column' }}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+    <div className="page">
       <Navbar />
-
-      <div style={{ maxWidth:1280, margin:'0 auto', width:'100%', padding:'2rem 1.5rem', flex:1 }}>
-        {/* Header row */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-          flexWrap:'wrap', gap:'1rem', marginBottom:'1.5rem' }}>
+      <main id="main" className="page-main container section-sm">
+        <div className="page-header">
           <div>
-            <h1 style={{ color:'#ececec', fontSize:'1.4rem', fontWeight:700 }}>Browse Cars</h1>
-            {!loading && (
-              <div style={{ color:'#666', fontSize:'0.82rem', marginTop:3 }}>
-                {total.toLocaleString()} listing{total !== 1 ? 's' : ''} found
-              </div>
-            )}
+            <h1>Browse cars</h1>
+            <p aria-live="polite">
+              {loading ? 'Searching…' : `${total.toLocaleString()} ${total === 1 ? 'car' : 'cars'} found`}
+            </p>
           </div>
-          <div style={{ display:'flex', gap:'0.75rem', alignItems:'center' }}>
-            <button onClick={()=>setShowFilter(p=>!p)}
-              style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', color:'#ccc',
-                borderRadius:6, padding:'0.5rem 1rem', fontSize:'0.85rem', cursor:'pointer' }}
-              className="filter-toggle">
-              {showFilter ? 'Hide Filters' : 'Filters'}
+          <div className="row gap-2">
+            <button
+              type="button"
+              className="btn btn-secondary filter-toggle"
+              onClick={() => setShowFilters((p) => !p)}
+              aria-expanded={showFilters}
+              aria-controls="filters"
+            >
+              <Icon name="filter" /> Filters {activeCount > 0 && <span className="badge badge-red">{activeCount}</span>}
             </button>
-            <select value={sort} onChange={e=>{setSort(e.target.value);setPage(1);}}
-              style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', color:'#ccc',
-                borderRadius:6, padding:'0.5rem 0.75rem', fontSize:'0.85rem', cursor:'pointer', outline:'none' }}>
-              {SORT_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+            <label className="sr-only" htmlFor="sort">Sort by</label>
+            <select id="sort" className="select" style={{ width: 'auto', minWidth: 190 }} value={sort}
+              onChange={(e) => { setSort(e.target.value); setPage(1); }}>
+              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:'1.5rem', alignItems:'start' }}
-          className="search-layout">
+        <div className="split-filters">
+          <aside id="filters" className={`filters-col${showFilters ? ' is-open' : ''}`} aria-label="Filters">
+            <FilterPanel filters={filters} onChange={handleFilters} onClear={() => handleFilters(EMPTY)} />
+          </aside>
 
-          {/* Filter sidebar */}
-          <div className="filter-sidebar" style={{ display: showFilter ? 'block' : 'block' }}>
-            <FilterPanel filters={filters} onChange={handleFilters} onClear={clearFilters} />
-          </div>
-
-          {/* Results */}
           <div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:'1.25rem' }}>
+            <div className="grid-cards">
               {loading
-                ? Array(8).fill(0).map((_,i)=><Skeleton key={i} />)
+                ? Array.from({ length: 8 }, (_, i) => <CarCardSkeleton key={i} />)
                 : listings.length === 0
-                  ? <div style={{ color:'#555', gridColumn:'1/-1', textAlign:'center', padding:'4rem 0', fontSize:'1rem' }}>
-                      No listings match your filters.
+                  ? (
+                    <div className="card empty" style={{ gridColumn: '1 / -1' }}>
+                      <Icon name="search" />
+                      <h3>No cars match these filters</h3>
+                      <p>Try widening the price or year range, or clear the filters to see everything.</p>
+                      {activeCount > 0 && <button type="button" className="btn btn-secondary" onClick={() => handleFilters(EMPTY)}>Clear filters</button>}
                     </div>
-                  : listings.map(l=><CarCard key={l._id} listing={l} />)}
+                  )
+                  : listings.map((l) => <CarCard key={l._id} listing={l} />)}
             </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && !loading && (
-              <div style={{ display:'flex', justifyContent:'center', gap:'0.5rem',
-                marginTop:'2.5rem', flexWrap:'wrap' }}>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => setPage(p)}
-                    style={{ width:38, height:38, borderRadius:6, border:'1px solid',
-                      borderColor: p === page ? '#c41e2a' : '#2a2a2a',
-                      background: p === page ? '#c41e2a' : '#1a1a1a',
-                      color: p === page ? '#0d0d0d' : '#ccc',
-                      fontWeight: p === page ? 700 : 400,
-                      cursor:'pointer', fontSize:'0.85rem' }}>
-                    {p}
-                  </button>
-                ))}
-              </div>
-            )}
+            {!loading && <Pagination page={page} totalPages={totalPages} onChange={goToPage} />}
           </div>
         </div>
-      </div>
-
+      </main>
       <Footer />
       <style>{`
-        @media(max-width:768px){
-          .search-layout{grid-template-columns:1fr!important}
-          .filter-sidebar{display:none}
-          .filter-sidebar.open{display:block}
+        .filter-toggle { display: none; }
+        @media (max-width: 900px) {
+          .filter-toggle { display: inline-flex; }
+          .filters-col { display: none; }
+          .filters-col.is-open { display: block; }
         }
       `}</style>
     </div>

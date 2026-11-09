@@ -3,111 +3,120 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SearchBar from '../components/SearchBar';
-import CarCard from '../components/CarCard';
+import CarCard, { CarCardSkeleton } from '../components/CarCard';
+import Icon from '../components/Icon';
 import axiosInstance from '../api/axiosInstance';
 
-const Skeleton = () => (
-  <div style={{ background:'#141414', border:'1px solid #1e1e1e', borderRadius:10, overflow:'hidden' }}>
-    <div style={{ aspectRatio:'16/10', background:'#1e1e1e', animation:'pulse 1.4s infinite' }} />
-    <div style={{ padding:'0.9rem', display:'flex', flexDirection:'column', gap:8 }}>
-      <div style={{ height:14, background:'#1e1e1e', borderRadius:4, width:'70%', animation:'pulse 1.4s infinite' }} />
-      <div style={{ height:18, background:'#1e1e1e', borderRadius:4, width:'45%', animation:'pulse 1.4s infinite' }} />
-      <div style={{ height:10, background:'#1e1e1e', borderRadius:4, width:'55%', animation:'pulse 1.4s infinite' }} />
-    </div>
-  </div>
-);
-
-const grid = { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'1.25rem' };
+const BODY_SHORTCUTS = [
+  ['suv', 'SUVs'], ['sedan', 'Sedans'], ['pickup', 'Pickups'],
+  ['hatchback', 'Hatchbacks'], ['van', 'Vans'], ['coupe', 'Coupes'],
+];
 
 export default function Home() {
-  const [boosted,  setBoosted]  = useState([]);
-  const [all,      setAll]      = useState([]);
+  const [boosted, setBoosted] = useState([]);
+  const [latest, setLatest] = useState([]);
   const [loadingB, setLoadingB] = useState(true);
-  const [loadingA, setLoadingA] = useState(true);
+  const [loadingL, setLoadingL] = useState(true);
 
   useEffect(() => {
     axiosInstance.get('/listings?isBoosted=true&limit=8')
-      .then(r => setBoosted(r.data.listings))
+      .then((r) => setBoosted(r.data.listings))
       .catch(() => {})
       .finally(() => setLoadingB(false));
-
     axiosInstance.get('/listings?limit=12')
-      .then(r => setAll(r.data.listings))
+      .then((r) => setLatest(r.data.listings))
       .catch(() => {})
-      .finally(() => setLoadingA(false));
+      .finally(() => setLoadingL(false));
   }, []);
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0d0d0d', display:'flex', flexDirection:'column' }}>
-      <style>{`
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-      `}</style>
+    <div className="page">
       <Navbar />
 
-      {/* Hero */}
-      <section style={{ background:'linear-gradient(160deg,#0d0d0d 0%,#111 50%,#0d0d0d 100%)',
-        padding:'5rem 1.5rem 4rem', textAlign:'center', borderBottom:'1px solid #1a1a1a',
-        animation:'fadeIn 0.5s ease' }}>
-        <div style={{ maxWidth:800, margin:'0 auto' }}>
-          <div style={{ color:'#c41e2a', fontSize:'0.8rem', fontWeight:700, letterSpacing:3,
-            textTransform:'uppercase', marginBottom:'1rem' }}>
-            Ghana's #1 Car Platform
-          </div>
-          <h1 style={{ fontSize:'clamp(2rem,5vw,3.5rem)', fontWeight:900, color:'#ececec',
-            lineHeight:1.15, marginBottom:'1rem' }}>
-            Ghana's Premier<br />
-            <span style={{ color:'#c41e2a' }}>Car Marketplace</span>
-          </h1>
-          <p style={{ color:'#888', fontSize:'1.05rem', marginBottom:'2.5rem', maxWidth:520, margin:'0 auto 2.5rem' }}>
-            Buy and sell quality vehicles across all sixteen regions. Trusted dealers, verified listings.
+      <section className="hero">
+        <div className="container fade-up">
+          <div className="eyebrow">Ghana's car marketplace</div>
+          <h1 className="mt-4">Find your next car from <em>dealers you can trust.</em></h1>
+          <p className="hero-lead">
+            Browse verified listings across all sixteen regions, compare prices, and reach the dealer directly by phone, WhatsApp or enquiry.
           </p>
           <SearchBar />
+          <div className="hero-trust">
+            <span><Icon name="shield" /> Dealers reviewed before listing</span>
+            <span><Icon name="pin" /> All 16 regions</span>
+            <span><Icon name="message" /> Contact dealers directly</span>
+          </div>
         </div>
       </section>
 
-      <main style={{ flex:1, maxWidth:1280, margin:'0 auto', width:'100%', padding:'3rem 1.5rem' }}>
+      <main id="main" className="page-main">
+        <section className="container section-sm">
+          <nav aria-label="Browse by body type" className="row wrap gap-2">
+            {BODY_SHORTCUTS.map(([value, label]) => (
+              <Link key={value} to={`/listings?bodyType=${value}`} className="btn btn-secondary btn-sm">
+                <Icon name="car" /> {label}
+              </Link>
+            ))}
+          </nav>
+        </section>
 
-        {/* Featured listings */}
         {(loadingB || boosted.length > 0) && (
-          <section style={{ marginBottom:'3.5rem' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1.5rem' }}>
-              <h2 style={{ color:'#ececec', fontSize:'1.3rem', fontWeight:700 }}>Featured Listings</h2>
-              <span style={{ background:'#c41e2a', color:'#0d0d0d', fontSize:'0.65rem',
-                fontWeight:800, padding:'2px 8px', borderRadius:3, letterSpacing:0.5 }}>BOOSTED</span>
+          <section className="container section-sm" aria-labelledby="featured-h">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">Featured</div>
+                <h2 id="featured-h" className="mt-2">Featured listings</h2>
+              </div>
             </div>
-            <div style={grid}>
-              {loadingB ? Array(4).fill(0).map((_,i)=><Skeleton key={i} />) :
-                boosted.map(l=><CarCard key={l._id} listing={l} />)}
+            <div className="grid-cards">
+              {loadingB
+                ? Array.from({ length: 4 }, (_, i) => <CarCardSkeleton key={i} />)
+                : boosted.map((l) => <CarCard key={l._id} listing={l} />)}
             </div>
           </section>
         )}
 
-        {/* All listings */}
-        <section>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.5rem' }}>
-            <h2 style={{ color:'#ececec', fontSize:'1.3rem', fontWeight:700 }}>Latest Listings</h2>
-            <Link to="/listings" style={{ color:'#c41e2a', fontSize:'0.88rem', fontWeight:600 }}>
-              View All →
-            </Link>
+        <section className="container section" aria-labelledby="latest-h">
+          <div className="section-head">
+            <div>
+              <div className="eyebrow">Just listed</div>
+              <h2 id="latest-h" className="mt-2">Latest listings</h2>
+            </div>
+            <Link to="/listings" className="more">View all <Icon name="arrowRight" /></Link>
           </div>
-          <div style={grid}>
-            {loadingA ? Array(6).fill(0).map((_,i)=><Skeleton key={i} />) :
-              all.length === 0
-                ? <div style={{ color:'#555', gridColumn:'1/-1', textAlign:'center', padding:'3rem 0' }}>
-                    No listings yet. Be the first to sell!
+          <div className="grid-cards">
+            {loadingL
+              ? Array.from({ length: 8 }, (_, i) => <CarCardSkeleton key={i} />)
+              : latest.length === 0
+                ? (
+                  <div className="card empty" style={{ gridColumn: '1 / -1' }}>
+                    <Icon name="car" />
+                    <h3>No cars listed yet</h3>
+                    <p>Dealers are being onboarded now. If you sell cars, you can be one of the first.</p>
+                    <Link to="/register/dealer" className="btn btn-primary">Become a dealer</Link>
                   </div>
-                : all.map(l=><CarCard key={l._id} listing={l} />)}
+                )
+                : latest.map((l) => <CarCard key={l._id} listing={l} />)}
           </div>
-          {!loadingA && all.length > 0 && (
-            <div style={{ textAlign:'center', marginTop:'2rem' }}>
-              <Link to="/listings" style={{ display:'inline-block', background:'transparent',
-                border:'1px solid #c41e2a', color:'#c41e2a', padding:'0.7rem 2rem',
-                borderRadius:6, fontWeight:600, fontSize:'0.9rem' }}>
-                Browse All Cars
-              </Link>
+          {!loadingL && latest.length > 0 && (
+            <div className="center mt-8">
+              <Link to="/listings" className="btn btn-secondary btn-lg">Browse all cars <Icon name="arrowRight" /></Link>
             </div>
           )}
+        </section>
+
+        <section className="container section-sm" style={{ paddingBottom: 'var(--sp-16)' }}>
+          <div className="card card-pad row wrap between gap-6" style={{
+            background: 'radial-gradient(600px 240px at 100% 0%, rgba(196,30,42,.22), transparent 70%), var(--color-surface)',
+            borderColor: 'var(--red-line)',
+          }}>
+            <div style={{ maxWidth: 560 }}>
+              <div className="eyebrow">For dealers</div>
+              <h2 className="mt-2">Put your stock in front of buyers across Ghana</h2>
+              <p className="mt-2">List your vehicles, receive enquiries by email, and feature your best cars at the top of search.</p>
+            </div>
+            <Link to="/register/dealer" className="btn btn-primary btn-lg">List your cars <Icon name="arrowRight" /></Link>
+          </div>
         </section>
       </main>
 
