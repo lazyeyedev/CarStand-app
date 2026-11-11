@@ -119,7 +119,7 @@ export default function AdminListings() {
           <EmptyState icon="car" title="No listings found">{query ? `Nothing matches "${query}".` : 'No listings match this filter.'}</EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table table-stack">
               <thead>
                 <tr>
                   <th scope="col">Listing</th>
@@ -134,7 +134,7 @@ export default function AdminListings() {
               <tbody>
                 {listings.map((l) => (
                   <tr key={l._id}>
-                    <td>
+                    <td data-label="Listing" className="cell-main">
                       <Link to={`/admin/listings/${l._id}`} className="row gap-3" style={{ color: 'inherit' }}>
                         <img src={l.images?.[0] || PLACEHOLDER} alt="" loading="lazy" style={{ width: 64, height: 44, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)', flexShrink: 0 }} onError={(e) => { e.currentTarget.src = PLACEHOLDER; }} />
                         <div style={{ minWidth: 0 }}>
@@ -143,12 +143,12 @@ export default function AdminListings() {
                         </div>
                       </Link>
                     </td>
-                    <td>{l.dealer?.businessName || 'Unknown'}</td>
-                    <td className="strong" style={{ whiteSpace: 'nowrap' }}>{fmtPrice(l.price, l.currency)}</td>
-                    <td>{statusBadge(l)}</td>
-                    <td>{l.views || 0}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{new Date(l.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</td>
-                    <td>
+                    <td data-label="Dealer">{l.dealer?.businessName || 'Unknown'}</td>
+                    <td data-label="Price" className="strong" style={{ whiteSpace: 'nowrap' }}>{fmtPrice(l.price, l.currency)}</td>
+                    <td data-label="Status">{statusBadge(l)}</td>
+                    <td data-label="Views">{l.views || 0}</td>
+                    <td data-label="Listed" style={{ whiteSpace: 'nowrap' }}>{new Date(l.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</td>
+                    <td data-label="Actions" className="cell-actions">
                       <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
                         {!l.isApproved ? (
                           <button type="button" className="btn btn-success btn-sm" disabled={!!acting[l._id]} onClick={() => act(l._id, 'approve', 'Listing approved', { isApproved: true, isActive: true })}>

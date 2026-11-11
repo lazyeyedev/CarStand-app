@@ -179,6 +179,16 @@ export const CATEGORIES = [
         links: [{ to: '/login', label: 'Sign in', audience: 'guest' }],
       },
       {
+        id: 'install',
+        audience: 'all',
+        q: 'Can I install Carmium as an app?',
+        answer: [
+          'Yes. On Android, open the browser menu and choose "Install app" or "Add to Home screen". You can also use the "Install the app" button at the bottom of the home page when it appears.',
+          'On iPhone or iPad, open Carmium in Safari, tap the Share button, then "Add to Home Screen".',
+          'The app opens full screen from your home screen and uses the same account.',
+        ],
+      },
+      {
         id: 'change-email',
         audience: 'signedIn',
         q: 'Can I change my email?',

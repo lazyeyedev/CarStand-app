@@ -74,7 +74,7 @@ export default function DealerListings() {
           </EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table table-stack">
               <thead>
                 <tr>
                   <th scope="col">Vehicle</th>
@@ -88,7 +88,7 @@ export default function DealerListings() {
               <tbody>
                 {listings.map((l) => (
                   <tr key={l._id}>
-                    <td>
+                    <td data-label="Vehicle" className="cell-main">
                       <div className="row gap-3">
                         <img src={l.images?.[0] || PLACEHOLDER} alt="" width="72" height="50" loading="lazy"
                           style={{ width: 72, height: 50, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)', flexShrink: 0 }}
@@ -100,14 +100,14 @@ export default function DealerListings() {
                         </div>
                       </div>
                     </td>
-                    <td className="strong" style={{ whiteSpace: 'nowrap', color: 'var(--red-text)' }}>{fmtPrice(l.price, l.currency)}</td>
-                    <td>
+                    <td data-label="Price" className="strong" style={{ whiteSpace: 'nowrap', color: 'var(--red-text)' }}>{fmtPrice(l.price, l.currency)}</td>
+                    <td data-label="Status">
                       {statusOf(l)}
                       {featuredUntil(l) && <div className="text-xs mt-2" style={{ whiteSpace: 'nowrap', color: 'var(--red-text)', fontWeight: 600 }}>Featured until {fmtShort(featuredUntil(l))}</div>}
                     </td>
-                    <td>{l.views || 0}</td>
-                    <td>{l.enquiryCount || 0}</td>
-                    <td>
+                    <td data-label="Views">{l.views || 0}</td>
+                    <td data-label="Enquiries">{l.enquiryCount || 0}</td>
+                    <td data-label="Actions" className="cell-actions">
                       <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
                         {l.isActive && l.isApproved && (
                           <Link to={`/dealer/boost?listingId=${l._id}`} className="btn btn-outline-red btn-sm"><Icon name="zap" /> {featuredUntil(l) ? 'Extend' : 'Boost'}</Link>

@@ -83,7 +83,7 @@ export default function AdminDealers() {
           <EmptyState icon="store" title="No dealers here">{filter === 'false' ? 'Nobody is waiting for approval.' : 'No dealers match this filter.'}</EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table table-stack">
               <thead>
                 <tr>
                   <th scope="col">Dealer</th>
@@ -97,7 +97,7 @@ export default function AdminDealers() {
               <tbody>
                 {dealers.map((d) => (
                   <tr key={d._id}>
-                    <td>
+                    <td data-label="Dealer" className="cell-main">
                       <Link to={`/admin/dealers/${d._id}`} className="row gap-3" style={{ color: 'inherit' }}>
                         {d.logo
                           ? <img src={d.logo} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
@@ -108,19 +108,19 @@ export default function AdminDealers() {
                         </div>
                       </Link>
                     </td>
-                    <td>
+                    <td data-label="Owner">
                       <div>{d.user?.name}</div>
                       <div className="text-xs muted">{d.user?.email}</div>
                     </td>
-                    <td>{d.region}</td>
-                    <td><span className={`badge ${TIER_BADGE[d.subscriptionTier || 'basic']}`} style={{ textTransform: 'capitalize' }}>{d.subscriptionTier || 'basic'}</span></td>
-                    <td>
+                    <td data-label="Region">{d.region}</td>
+                    <td data-label="Plan"><span className={`badge ${TIER_BADGE[d.subscriptionTier || 'basic']}`} style={{ textTransform: 'capitalize' }}>{d.subscriptionTier || 'basic'}</span></td>
+                    <td data-label="Status">
                       <div className="row wrap gap-1">
                         <span className={`badge ${d.isApproved ? 'badge-success' : 'badge-warning'}`}>{d.isApproved ? 'Approved' : 'Pending'}</span>
                         {d.isVerified && <span className="badge badge-red"><Icon name="checkCircle" /> Verified</span>}
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Actions" className="cell-actions">
                       <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
                         {!d.isApproved && (
                           <button type="button" className="btn btn-success btn-sm" disabled={!!acting[d._id]} onClick={() => act(d._id, 'approve', 'Dealer approved', { isApproved: true })}>

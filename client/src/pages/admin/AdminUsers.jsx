@@ -75,7 +75,7 @@ export default function AdminUsers() {
           <EmptyState icon="users" title={query ? 'No matching users' : 'No users yet'}>{query ? `Nothing matches "${query}".` : null}</EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table table-stack">
               <thead>
                 <tr>
                   <th scope="col">User</th>
@@ -88,7 +88,7 @@ export default function AdminUsers() {
               <tbody>
                 {users.map((u) => (
                   <tr key={u._id}>
-                    <td>
+                    <td data-label="User" className="cell-main">
                       <div className="row gap-3">
                         {u.avatar
                           ? <img src={u.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
@@ -96,10 +96,10 @@ export default function AdminUsers() {
                         <span className="strong">{u.name}</span>
                       </div>
                     </td>
-                    <td>{u.email}</td>
-                    <td><span className={`badge ${ROLE_BADGE[u.role] ?? ''}`} style={{ textTransform: 'capitalize' }}>{u.role}</span></td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{new Date(u.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="Email">{u.email}</td>
+                    <td data-label="Role"><span className={`badge ${ROLE_BADGE[u.role] ?? ''}`} style={{ textTransform: 'capitalize' }}>{u.role}</span></td>
+                    <td data-label="Joined" style={{ whiteSpace: 'nowrap' }}>{new Date(u.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                    <td data-label="Account" className="cell-actions" style={{ textAlign: 'right' }}>
                       {u.role === 'admin' ? <span className="text-xs muted">Protected</span> : (
                         <label className="check" style={{ justifyContent: 'flex-end', minHeight: 36 }}>
                           <span className={`badge ${u.isActive ? 'badge-success' : 'badge-error'}`}>{u.isActive ? 'Active' : 'Disabled'}</span>

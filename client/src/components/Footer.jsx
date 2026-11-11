@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { InstallAppButton } from './AppStatus';
 import Icon, { Brand } from './Icon';
 
 // Contact details are deliberately limited to what's true today: the
@@ -34,6 +35,7 @@ export default function Footer() {
 
         <div className="footer-base">
           <span>© {year} Carmium. All rights reserved.</span>
+          <InstallAppButton />
           <span>A TechSphere / Sevinity Holdings product</span>
         </div>
       </div>

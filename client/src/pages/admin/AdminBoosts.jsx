@@ -33,7 +33,7 @@ export default function AdminBoosts() {
           <EmptyState icon="zap" title="No boosts yet">Paid boosts appear here once a dealer features a listing.</EmptyState>
         ) : (
           <div className="table-wrap">
-            <table className="table">
+            <table className="table table-stack">
               <thead>
                 <tr>
                   <th scope="col">Listing</th>
@@ -49,17 +49,17 @@ export default function AdminBoosts() {
                   const status = new Date(b.endDate) < new Date() ? 'expired' : b.status;
                   return (
                     <tr key={b._id}>
-                      <td>
+                      <td data-label="Listing" className="cell-main">
                         {b.listing?._id
                           ? <Link to={`/admin/listings/${b.listing._id}`} className="strong" style={{ color: 'var(--color-text)' }}>{b.listing.title}</Link>
                           : <span className="strong">{b.listing?.title || 'Removed listing'}</span>}
                         <div className="text-xs muted">{[b.listing?.year, b.listing?.make, b.listing?.model].filter(Boolean).join(' ')}</div>
                       </td>
-                      <td>{b.dealer?.businessName || 'Unknown'}</td>
-                      <td><span className={`badge ${TYPE_BADGE[b.boostType] ?? ''}`} style={{ textTransform: 'capitalize' }}>{b.boostType}</span></td>
-                      <td className="strong" style={{ textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>GHS {Number(b.amountPaid || 0).toLocaleString()}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(b.startDate)} to {fmtDate(b.endDate)}</td>
-                      <td><StatusBadge status={status} /></td>
+                      <td data-label="Dealer">{b.dealer?.businessName || 'Unknown'}</td>
+                      <td data-label="Type"><span className={`badge ${TYPE_BADGE[b.boostType] ?? ''}`} style={{ textTransform: 'capitalize' }}>{b.boostType}</span></td>
+                      <td data-label="Amount" className="strong" style={{ textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>GHS {Number(b.amountPaid || 0).toLocaleString()}</td>
+                      <td data-label="Runs" style={{ whiteSpace: 'nowrap' }}>{fmtDate(b.startDate)} to {fmtDate(b.endDate)}</td>
+                      <td data-label="Status"><StatusBadge status={status} /></td>
                     </tr>
                   );
                 })}
