@@ -144,9 +144,9 @@ export default function AdminDealerDetail() {
           <div className="row gap-3 mb-6">
             {dealer.user?.avatar
               ? <img src={dealer.user.avatar} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
-              : <span className="avatar" style={{ width: 48, height: 48 }}>{dealer.user?.name?.[0]}</span>}
-            <div>
-              <div className="strong">{dealer.user?.name}</div>
+              : <span className="avatar" style={{ width: 48, height: 48, flexShrink: 0 }}>{dealer.user?.name?.[0]}</span>}
+            <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>{dealer.user?.name}</div>
               <div className="text-sm muted">{dealer.user?.email}</div>
             </div>
           </div>

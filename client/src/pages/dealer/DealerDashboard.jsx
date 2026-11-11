@@ -57,7 +57,7 @@ export default function DealerDashboard() {
         <Stat label="New enquiries" value={stats?.newEnquiries} loading={loading} sub="Not yet read" />
       </div>
 
-      <div className="split" style={{ gridTemplateColumns: 'minmax(0,1fr) 300px' }}>
+      <div className="split split-narrow">
         <section className="card" aria-labelledby="enq-h">
           <div className="card-head"><h2 id="enq-h" className="card-title">Recent enquiries</h2></div>
           {loading ? <TableSkeleton rows={4} cols={3} /> : enquiries.length === 0 ? (
@@ -68,7 +68,7 @@ export default function DealerDashboard() {
             <ul style={{ listStyle: 'none' }}>
               {enquiries.map((e) => (
                 <li key={e._id} className="row between gap-4" style={{ padding: 'var(--sp-4) var(--sp-5)', borderBottom: '1px solid var(--color-border-soft)' }}>
-                  <div className="grow">
+                  <div className="grow" style={{ minWidth: 0 }}>
                     <div className="truncate" style={{ fontWeight: 600, color: 'var(--color-text)' }}>{e.listing?.title || 'Listing removed'}</div>
                     <div className="text-xs muted mt-2">{e.user?.name || e.guestName || 'Guest'} · {TYPE_LABEL[e.type] || e.type}</div>
                   </div>

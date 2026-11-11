@@ -164,9 +164,18 @@ img { height: auto; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-4); }
 .split { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--sp-8); align-items: start; }
 .split-filters { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--sp-8); align-items: start; }
+/* Narrower side column (dashboards). A class, not an inline style: an inline
+   grid-template-columns beats the media query below and stops the columns
+   stacking on phones. */
+.split.split-narrow { grid-template-columns: minmax(0, 1fr) 300px; }
 @media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 900px)  { .split, .split-filters { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px)  { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+/* minmax(0, 1fr), not 1fr: a bare 1fr column refuses to get narrower than its
+   longest word or image, which pushes the page wider than the phone. */
+@media (max-width: 900px)  { .split, .split.split-narrow, .split-filters { grid-template-columns: minmax(0, 1fr); } .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px)  { .grid-2, .grid-3, .grid-4 { grid-template-columns: minmax(0, 1fr); } }
+/* Long unbroken text (emails, references, long titles) wraps instead of
+   widening its container. */
+h1, h2, h3, dd, p, .sub, .auth-card strong { overflow-wrap: anywhere; }
 
 /* ---------- Buttons ---------- */
 .btn {
