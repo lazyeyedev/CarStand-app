@@ -13,6 +13,7 @@ const morgan  = require('morgan');
 const rateLimit = require('express-rate-limit');
 
 const connectDB = require('./config/db');
+const { isDbReady } = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
 
 const authRoutes    = require('./routes/authRoutes');
@@ -78,6 +79,19 @@ const limiter = rateLimit({
   message:  { message: 'Too many requests, please try again later.' },
 });
 app.use(limiter);
+
+// Health check: open /api/health in a browser to see whether the server is up
+// and whether it can reach the database.
+app.get('/api/health', (req, res) => {
+  res.status(isDbReady() ? 200 : 503).json({ server: 'up', database: isDbReady() ? 'connected' : 'not connected' });
+});
+
+// Without a database nothing below can work — say so plainly instead of
+// letting each request fail with a generic error.
+app.use('/api', (req, res, next) => {
+  if (isDbReady()) return next();
+  res.status(503).json({ message: 'The service is temporarily unavailable. Please try again in a moment.' });
+});
 
 app.use('/api/auth',     authRoutes);
 app.use('/api/listings', listingRoutes);

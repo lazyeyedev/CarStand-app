@@ -576,3 +576,41 @@ img { height: auto; }
 .boost-receipt dt { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 2px; }
 .boost-receipt dd { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
 @media (max-width: 480px) { .boost-receipt { grid-template-columns: 1fr; } }
+
+/* ---------- Photo viewer (ImageLightbox.jsx) ---------- */
+.gallery-main.is-openable img { cursor: zoom-in; }
+.gallery-expand { position: absolute; bottom: .75rem; left: .75rem; display: inline-flex; align-items: center; gap: .4rem; min-height: 36px; padding: 0 .8rem; border: 1px solid rgba(255,255,255,.18); border-radius: var(--radius-pill); background: rgba(10,10,10,.75); color: #fff; font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; backdrop-filter: blur(6px); transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.gallery-expand:hover { background: var(--red); border-color: var(--red); }
+.gallery-expand svg { width: 15px; height: 15px; }
+
+.lightbox { position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; background: rgba(5,5,5,.96); animation: lightbox-in var(--t-med) var(--ease); }
+@keyframes lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+.lightbox-bar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); padding-top: max(var(--sp-3), env(safe-area-inset-top)); }
+.lightbox-count { color: #fff; font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lightbox-tools { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; }
+.lightbox-btn { display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 .5rem; border: 1px solid rgba(255,255,255,.16); border-radius: var(--radius-sm); background: rgba(255,255,255,.06); color: #fff; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; transition: background var(--t-fast) var(--ease); }
+.lightbox-btn:hover:not(:disabled) { background: rgba(255,255,255,.16); }
+.lightbox-btn:disabled { opacity: .35; cursor: default; }
+.lightbox-btn svg { width: 20px; height: 20px; }
+.lightbox-pct { min-width: 60px; font-variant-numeric: tabular-nums; }
+
+.lightbox-stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.lightbox-stage img { position: absolute; inset: 0; margin: auto; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; transition: transform .18s var(--ease); will-change: transform; cursor: zoom-in; -webkit-user-drag: none; }
+.lightbox-stage.is-zoomed img { cursor: grab; }
+.lightbox-stage.is-dragging img { cursor: grabbing; }
+.lightbox-spinner { position: absolute; width: 32px; height: 32px; }
+
+.lightbox-nav { position: absolute; top: 50%; z-index: 2; transform: translateY(-50%); display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; background: rgba(10,10,10,.6); color: #fff; cursor: pointer; transition: background var(--t-fast) var(--ease); }
+.lightbox-nav:hover { background: var(--red); border-color: var(--red); }
+.lightbox-nav.prev { left: var(--sp-4); } .lightbox-nav.next { right: var(--sp-4); }
+.lightbox-nav svg { width: 22px; height: 22px; }
+
+.lightbox-hint { position: relative; z-index: 2; margin: 0; padding: var(--sp-3) var(--sp-4); padding-bottom: max(var(--sp-3), env(safe-area-inset-bottom)); text-align: center; color: rgba(255,255,255,.6); font-size: var(--fs-xs); }
+.lightbox-hint .hint-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .lightbox-hint .hint-mouse { display: none; }
+  .lightbox-hint .hint-touch { display: inline; }
+  .lightbox-nav { width: 40px; height: 40px; }
+  .lightbox-nav.prev { left: var(--sp-2); } .lightbox-nav.next { right: var(--sp-2); }
+}
+@media (prefers-reduced-motion: reduce) { .lightbox { animation: none; } .lightbox-stage img { transition: none; } }

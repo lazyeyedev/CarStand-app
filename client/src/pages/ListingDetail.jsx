@@ -9,6 +9,8 @@ import Footer from '../components/Footer';
 import BoostBadge from '../components/BoostBadge';
 import Icon from '../components/Icon';
 import { fmtPrice } from '../components/CarCard';
+import { whatsappLink } from '../utils/whatsapp';
+import ImageLightbox from '../components/ImageLightbox';
 import axiosInstance from '../api/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import { getPlaceholder } from '../utils/placeholder';
@@ -36,6 +38,7 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [idx, setIdx] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -53,7 +56,14 @@ export default function ListingDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  useEffect(() => { if (listing) document.title = `${listing.title} · Carmium`; }, [listing]);
+  // Put the car in the tab title while this page is open, and restore the
+  // site title on the way out so other pages don't keep the car's name.
+  useEffect(() => {
+    if (!listing) return undefined;
+    const siteTitle = "Carmium — Ghana's Premier Car Marketplace";
+    document.title = `${listing.title} · Carmium`;
+    return () => { document.title = siteTitle; };
+  }, [listing]);
 
   const onEnquiry = async (data) => {
     setSubmitting(true);
@@ -105,6 +115,7 @@ export default function ListingDetail() {
   }
 
   const images = listing.images?.length ? listing.images : [PLACEHOLDER];
+  const hasPhotos = Boolean(listing.images?.length);
   const dealer = listing.dealer;
   const go = (d) => setIdx((i) => (i + d + images.length) % images.length);
   const specs = [
@@ -129,13 +140,23 @@ export default function ListingDetail() {
           <div className="stack gap-6" style={{ minWidth: 0 }}>
             <div>
               <div
-                className="gallery-main"
+                className={`gallery-main${hasPhotos ? ' is-openable' : ''}`}
                 tabIndex={images.length > 1 ? 0 : undefined}
-                onKeyDown={(e) => { if (e.key === 'ArrowLeft') go(-1); if (e.key === 'ArrowRight') go(1); }}
+                onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'ArrowLeft') go(-1); if (e.key === 'ArrowRight') go(1); }}
                 aria-roledescription="carousel"
                 aria-label={`${listing.title} photos`}
               >
-                <img src={images[idx]} alt={`${listing.title} (${idx + 1} of ${images.length})`} onError={(e) => { e.currentTarget.src = PLACEHOLDER; }} />
+                <img
+                  src={images[idx]}
+                  alt={`${listing.title} (${idx + 1} of ${images.length})`}
+                  onClick={hasPhotos ? () => setViewerOpen(true) : undefined}
+                  onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+                />
+                {hasPhotos && (
+                  <button type="button" className="gallery-expand" onClick={() => setViewerOpen(true)} aria-label="View photos full screen">
+                    <Icon name="expand" /> View full screen
+                  </button>
+                )}
                 {listing.isBoosted && <div className="car-card-flag"><BoostBadge /></div>}
                 {images.length > 1 && (
                   <>
@@ -201,7 +222,7 @@ export default function ListingDetail() {
                 <div className="stack gap-2">
                   {dealer.phone && <a href={`tel:${dealer.phone}`} className="btn btn-secondary btn-block"><Icon name="phone" /> Call {dealer.phone}</a>}
                   {dealer.whatsapp && (
-                    <a href={`https://wa.me/${dealer.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="btn btn-success btn-block">
+                    <a href={whatsappLink(dealer.whatsapp)} target="_blank" rel="noreferrer" className="btn btn-success btn-block">
                       <Icon name="message" /> Chat on WhatsApp
                     </a>
                   )}
@@ -271,6 +292,16 @@ export default function ListingDetail() {
         </div>
       </main>
       <Footer />
+      {viewerOpen && (
+        <ImageLightbox
+          images={images}
+          index={idx}
+          onIndexChange={setIdx}
+          onClose={() => setViewerOpen(false)}
+          title={listing.title}
+          placeholder={PLACEHOLDER}
+        />
+      )}
     </div>
   );
 }

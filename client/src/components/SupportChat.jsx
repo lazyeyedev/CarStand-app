@@ -3,12 +3,13 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Icon from './Icon';
 import { CATEGORIES, GREETING, SUPPORT_CONTACT } from '../utils/supportContent';
+import { whatsappLink } from '../utils/whatsapp';
 
 // A scripted help widget: fixed questions and answers from supportContent.js,
 // shown as a chat. No AI and no network calls — it can only say what is
 // written in that file.
 
-const waNumber = SUPPORT_CONTACT.whatsapp ? String(SUPPORT_CONTACT.whatsapp).replace(/\D/g, '') : '';
+const waNumber = whatsappLink(SUPPORT_CONTACT.whatsapp);
 const hasHuman = Boolean(waNumber || SUPPORT_CONTACT.email);
 
 let nextId = 1;
@@ -123,7 +124,7 @@ export default function SupportChat() {
                 {m.human && (
                   <div className="support-links">
                     {waNumber && (
-                      <a className="btn btn-secondary btn-sm" href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">
+                      <a className="btn btn-secondary btn-sm" href={waNumber} target="_blank" rel="noopener noreferrer">
                         <Icon name="whatsapp" /> WhatsApp
                       </a>
                     )}
