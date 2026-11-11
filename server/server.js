@@ -21,6 +21,7 @@ const dealerRoutes  = require('./routes/dealerRoutes');
 const userRoutes    = require('./routes/userRoutes');
 const adminRoutes   = require('./routes/adminRoutes');
 const boostRoutes   = require('./routes/boostRoutes');
+const { paystackWebhook } = require('./controllers/boostController');
 
 connectDB();
 
@@ -62,8 +63,14 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // NOTE: express.json() is applied globally here.
 // The Paystack webhook route applies express.raw() at the route level
 // BEFORE express.json() touches it, so signature verification works correctly.
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// The Paystack webhook has to see the raw request bytes to check the signature,
+// so it is mounted BEFORE express.json(). (Declaring express.raw on the route
+// inside boostRoutes was not enough — the global JSON parser ran first and the
+// handler received a parsed object, which made every webhook call fail.)
+app.post('/api/boosts/webhook', express.raw({ type: 'application/json' }), paystackWebhook);
+
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -79,7 +86,15 @@ app.use('/api/users',    userRoutes);
 app.use('/api/admin',    adminRoutes);
 app.use('/api/boosts',   boostRoutes);
 
+// Unknown API route -> JSON 404 rather than Express's HTML page
+app.use('/api', (req, res) => res.status(404).json({ message: 'Not found' }));
+
 app.use(errorHandler);
+
+// Last line of defence: a promise nobody awaited must not take the server down.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

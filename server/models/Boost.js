@@ -10,7 +10,9 @@ const boostSchema = new mongoose.Schema(
     currency: { type: String, default: 'GHS' },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    paystackReference: { type: String },
+    // unique + sparse: one boost per payment, even if the webhook and the
+    // browser's verify call both arrive for the same reference.
+    paystackReference: { type: String, unique: true, sparse: true },
     status: { type: String, enum: ['active', 'expired', 'pending'], default: 'pending' },
   },
   { timestamps: true }

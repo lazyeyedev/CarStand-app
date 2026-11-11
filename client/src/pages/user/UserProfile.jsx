@@ -97,6 +97,18 @@ export default function UserProfile() {
 
             <ChangePasswordCard />
 
+            {profile?.role === 'user' && (
+              <section className="card" aria-labelledby="dealer-h">
+                <div className="card-head"><h2 id="dealer-h" className="card-title">Selling cars?</h2></div>
+                <div className="card-pad row wrap gap-4" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                  <p className="muted" style={{ maxWidth: 520 }}>
+                    Turn this account into a dealer account. You keep the same login and your enquiry history — just add your dealership details.
+                  </p>
+                  <Link to="/register/dealer" className="btn btn-secondary"><Icon name="store" /> Become a dealer</Link>
+                </div>
+              </section>
+            )}
+
             <section aria-labelledby="saved-h">
               <div className="section-head"><h2 id="saved-h" style={{ fontSize: 'var(--fs-xl)' }}>Saved cars</h2></div>
               {saved.length > 0 ? (

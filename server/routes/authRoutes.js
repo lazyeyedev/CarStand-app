@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   registerUser,
   registerDealer,
+  upgradeToDealer,
   login,
   getMe,
   changePassword,
@@ -14,6 +15,7 @@ const { loginLimiter } = require('../middleware/rateLimiters');
 
 router.post('/register', registerUser);
 router.post('/register/dealer', registerDealer);
+router.post('/upgrade-to-dealer', protect, upgradeToDealer);
 // Public login and admin login both route through here — loginLimiter covers both.
 router.post('/login', loginLimiter, login);
 router.get('/me', protect, getMe);

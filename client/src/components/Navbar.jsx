@@ -27,8 +27,9 @@ export default function Navbar() {
   const navCls = ({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`;
 
   const accountLinks = isDealer
-    ? [['/dealer/dashboard', 'Dashboard', 'dashboard'], ['/dealer/listings', 'My listings', 'list'], ['/dealer/profile', 'Dealer profile', 'store']]
-    : [['/profile', 'Profile', 'user'], ['/profile/enquiries', 'My enquiries', 'message']];
+    ? [['/dealer/dashboard', 'Dashboard', 'dashboard'], ['/dealer/listings', 'My listings', 'list'], ['/dealer/profile', 'Dealer profile', 'store'], ['/profile/enquiries', 'Enquiries I sent', 'message']]
+    : [['/profile', 'Profile', 'user'], ['/profile/enquiries', 'My enquiries', 'message'],
+       ...(user?.role === 'user' ? [['/register/dealer', 'Become a dealer', 'store']] : [])];
 
   return (
     <header className="navbar">

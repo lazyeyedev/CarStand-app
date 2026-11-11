@@ -519,3 +519,47 @@ img { height: auto; }
 @media (max-width: 560px) {
   .table-stack thead { display: none; }
 }
+
+/* ---------- Help widget (SupportChat.jsx) ---------- */
+/* Sits above page content and the mobile sidebar (120), below modals (300). */
+.support { position: fixed; right: var(--sp-4); bottom: var(--sp-4); z-index: 250; display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-3); pointer-events: none; }
+.support > * { pointer-events: auto; }
+.support-launcher { display: inline-flex; align-items: center; gap: .5rem; min-height: 48px; padding: 0 1.1rem; border: 0; border-radius: var(--radius-pill); background: var(--red); color: var(--on-red); font: inherit; font-weight: 700; font-size: var(--fs-sm); cursor: pointer; box-shadow: var(--shadow-md); transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.support-launcher:hover { background: var(--red-hover); }
+.support-launcher:active { transform: scale(.97); }
+.support-launcher[aria-expanded="true"] { width: 48px; padding: 0; justify-content: center; }
+.support-launcher svg { width: 20px; height: 20px; }
+
+.support-panel { display: flex; flex-direction: column; width: min(380px, calc(100vw - 2 * var(--sp-4))); height: min(560px, calc(100vh - 110px)); height: min(560px, calc(100dvh - 110px)); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; animation: support-in var(--t-med) var(--ease); }
+.support-panel:focus { outline: none; }
+@keyframes support-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.support-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); background: var(--color-surface-2); border-bottom: 1px solid var(--color-border); }
+.support-title { font-weight: 700; color: var(--color-text); }
+.support-sub { font-size: var(--fs-xs); color: var(--color-text-muted); }
+.support-icon-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-2); cursor: pointer; }
+.support-icon-btn:hover { background: var(--color-surface-3); color: var(--color-text); }
+.support-icon-btn svg { width: 18px; height: 18px; }
+
+.support-log { flex: 1; overflow-y: auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); overscroll-behavior: contain; }
+.support-msg { max-width: 88%; padding: .65rem .85rem; border-radius: var(--radius-md); font-size: var(--fs-sm); line-height: 1.5; }
+.support-msg p + p { margin-top: .5rem; }
+.support-msg-bot { align-self: flex-start; background: var(--color-surface-3); color: var(--color-text); border-bottom-left-radius: 3px; }
+.support-msg-user { align-self: flex-end; background: var(--red); color: var(--on-red); border-bottom-right-radius: 3px; }
+.support-links { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: .7rem; }
+
+.support-options { padding: var(--sp-3) var(--sp-4) var(--sp-4); border-top: 1px solid var(--color-border); background: var(--color-surface); max-height: 46%; overflow-y: auto; }
+.support-options-label { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--sp-2); }
+.support-back { display: inline-flex; align-items: center; gap: .25rem; margin: 0 0 var(--sp-2) -.3rem; padding: .3rem .5rem .3rem .2rem; border: 0; border-radius: var(--radius-sm); background: none; color: var(--red-text); font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; }
+.support-back:hover { background: var(--red-soft); }
+.support-back svg { width: 16px; height: 16px; }
+.support-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.support-chip { min-height: 36px; padding: .4rem .8rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-surface-2); color: var(--color-text); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
+.support-chip:hover { border-color: var(--red-line); background: var(--red-soft); }
+
+@media (max-width: 480px) {
+  .support { right: var(--sp-3); bottom: var(--sp-3); }
+  .support-panel { width: calc(100vw - 2 * var(--sp-3)); height: min(560px, calc(100dvh - 90px)); }
+}
+@media (prefers-reduced-motion: reduce) { .support-panel { animation: none; } }
+@media print { .support { display: none; } }

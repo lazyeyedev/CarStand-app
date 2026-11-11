@@ -38,4 +38,17 @@ const protect = async (req, res, next) => {
   next();
 };
 
-module.exports = { protect };
+// For routes that work for guests and signed-in users alike (enquiries).
+// No Authorization header -> continue as a guest. A header that is present
+// but invalid still fails with 401, via protect.
+//
+// This replaces an inline wrapper in listingRoutes that called protect()
+// without awaiting it: protect throws rather than calling next(err), so the
+// rejection went unhandled and took the whole Node process down on every
+// guest enquiry.
+const optionalAuth = async (req, res, next) => {
+  if (!req.headers.authorization) return next();
+  return protect(req, res, next);
+};
+
+module.exports = { protect, optionalAuth };

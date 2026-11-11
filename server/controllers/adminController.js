@@ -4,6 +4,7 @@ const Listing = require('../models/Listing');
 const Enquiry = require('../models/Enquiry');
 const Boost = require('../models/Boost');
 const { cloudinary } = require('../utils/cloudinaryUpload');
+const { contains, paginate } = require('../utils/queryHelpers');
 
 // GET /api/admin/stats
 const getDashboardStats = async (req, res) => {
@@ -39,15 +40,13 @@ const getDashboardStats = async (req, res) => {
 // GET /api/admin/users
 const getAllUsers = async (req, res) => {
   const { search, page = 1, limit = 20 } = req.query;
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-  const skip     = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
   const filter = {};
   if (search) {
     filter.$or = [
-      { name:  { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
+      { name:  contains(search) },
+      { email: contains(search) },
     ];
   }
 
@@ -67,6 +66,12 @@ const updateUserStatus = async (req, res) => {
     throw new Error('isActive must be a boolean');
   }
 
+  // Deactivating yourself would lock the only admin out of the platform.
+  if (!isActive && req.params.userId === req.user._id.toString()) {
+    res.status(400);
+    throw new Error('You cannot deactivate your own account');
+  }
+
   const user = await User.findByIdAndUpdate(
     req.params.userId,
     { isActive },
@@ -84,9 +89,7 @@ const updateUserStatus = async (req, res) => {
 // GET /api/admin/dealers
 const getAllDealers = async (req, res) => {
   const { approved, page = 1, limit = 20 } = req.query;
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-  const skip     = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
   const filter = {};
   if (approved !== undefined) filter.isApproved = approved === 'true';
@@ -220,17 +223,15 @@ const verifyDealer = async (req, res) => {
 // GET /api/admin/listings
 const getAllListings = async (req, res) => {
   const { approved, search, page = 1, limit = 20 } = req.query;
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-  const skip     = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
   const filter = {};
   if (approved !== undefined) filter.isApproved = approved === 'true';
   if (search) {
     filter.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { make:  { $regex: search, $options: 'i' } },
-      { model: { $regex: search, $options: 'i' } },
+      { title: contains(search) },
+      { make:  contains(search) },
+      { model: contains(search) },
     ];
   }
 
@@ -303,6 +304,18 @@ const updateListingAdmin = async (req, res) => {
 
 // PUT /api/admin/listings/:listingId/approve
 const approveListing = async (req, res) => {
+  // Listings from a dealer who isn't approved are hidden from the public, so
+  // approving one would silently do nothing. Say so instead.
+  const current = await Listing.findById(req.params.listingId).populate('dealer', 'isApproved businessName');
+  if (!current) {
+    res.status(404);
+    throw new Error('Listing not found');
+  }
+  if (!current.dealer || !current.dealer.isApproved) {
+    res.status(400);
+    throw new Error('Approve the dealer first — listings from unapproved dealers are not shown publicly');
+  }
+
   const listing = await Listing.findByIdAndUpdate(
     req.params.listingId,
     { isApproved: true, isActive: true },
@@ -364,9 +377,7 @@ const deleteListingAdmin = async (req, res) => {
 // GET /api/admin/enquiries
 const getAllEnquiries = async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-  const skip     = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
   const [enquiries, total] = await Promise.all([
     Enquiry.find()
@@ -384,9 +395,7 @@ const getAllEnquiries = async (req, res) => {
 // GET /api/admin/boosts
 const getBoosts = async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-  const skip     = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
   const [boosts, total] = await Promise.all([
     Boost.find({ status: 'active' })

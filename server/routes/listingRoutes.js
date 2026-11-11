@@ -9,16 +9,18 @@ const {
   deleteListing,
   deleteListingImage,
   getDealerListings,
+  getDealerListing,
   submitEnquiry,
 } = require('../controllers/listingController');
 
-const { protect } = require('../middleware/authMiddleware');
+const { protect, optionalAuth } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { upload } = require('../utils/cloudinaryUpload');
 
 // Public
 router.get('/', getListings);
 router.get('/dealer/mine', protect, authorize('dealer'), getDealerListings);
+router.get('/dealer/mine/:id', protect, authorize('dealer'), getDealerListing);
 router.get('/:id', getListing);
 
 // Dealer protected
@@ -41,15 +43,7 @@ router.put(
 router.delete('/:id', protect, authorize('dealer'), deleteListing);
 router.delete('/:id/images', protect, authorize('dealer'), deleteListingImage);
 
-// Enquiry — protect is optional (guest or user)
-router.post('/:id/enquiry', (req, res, next) => {
-  protect(req, res, (err) => {
-    // If token is present but invalid, err will be set — let it fail
-    // If no token at all, just continue as guest
-    if (err && err.message === 'Not authorized, no token') return next();
-    if (err) return next(err);
-    next();
-  });
-}, submitEnquiry);
+// Enquiry — open to guests and signed-in users
+router.post('/:id/enquiry', optionalAuth, submitEnquiry);
 
 module.exports = router;

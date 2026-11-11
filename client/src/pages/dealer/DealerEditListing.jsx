@@ -14,7 +14,9 @@ export default function DealerEditListing() {
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    axiosInstance.get(`/listings/${id}`)
+    // Dealer-only endpoint: the public one hides pending and inactive listings,
+    // which made those impossible to open for editing.
+    axiosInstance.get(`/listings/dealer/mine/${id}`)
       .then((r) => setListing(r.data))
       .catch(() => { toast.error('Listing not found'); navigate('/dealer/listings'); })
       .finally(() => setFetching(false));
@@ -23,8 +25,12 @@ export default function DealerEditListing() {
   const handleSubmit = async (formData) => {
     setLoading(true);
     try {
-      await axiosInstance.put(`/listings/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      toast.success('Listing updated');
+      const { data } = await axiosInstance.put(`/listings/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (data?.resubmitted) {
+        toast.info('Saved. Because the car details or photos changed, the listing is back in review and will reappear once approved.', { autoClose: 8000 });
+      } else {
+        toast.success('Listing updated');
+      }
       navigate('/dealer/listings');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Your changes could not be saved');

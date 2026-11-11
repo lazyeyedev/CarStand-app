@@ -72,6 +72,10 @@ const paystackWebhook = async (req, res) => {
   const signature = req.headers['x-paystack-signature'];
   const rawBody   = req.body; // Buffer from express.raw()
 
+  if (!signature || !Buffer.isBuffer(rawBody) || !process.env.PAYSTACK_SECRET_KEY) {
+    return res.status(401).json({ message: 'Invalid signature' });
+  }
+
   // Verify signature
   const hash = crypto
     .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)

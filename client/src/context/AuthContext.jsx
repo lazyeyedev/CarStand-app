@@ -54,6 +54,15 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
+  // Buyer -> dealer on the same account. The server returns a fresh token and
+  // the updated user, so the app switches to the dealer side without a re-login.
+  const upgradeToDealer = async (formData) => {
+    const { data } = await axiosInstance.post('/auth/upgrade-to-dealer', formData);
+    storeToken(data.token);
+    setUser(data.user);
+    return data.user;
+  };
+
   const logout = () => {
     localStorage.removeItem('carstand_token');
     localStorage.removeItem('carstand_user');
@@ -70,6 +79,7 @@ export const AuthProvider = ({ children }) => {
         login,
         registerUser,
         registerDealer,
+        upgradeToDealer,
         logout,
         isDealer: user?.role === 'dealer',
         isAdmin:  user?.role === 'admin',

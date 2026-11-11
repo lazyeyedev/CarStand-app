@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute, { AdminProtectedRoute } from './components/ProtectedRoute';
+import SupportChat from './components/SupportChat';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -117,6 +118,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
+        <SupportChat />
       </AuthProvider>
     </BrowserRouter>
   );

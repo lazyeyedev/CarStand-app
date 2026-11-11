@@ -5,35 +5,62 @@ const { cloudinary } = require('../utils/cloudinaryUpload');
 const extractPublicId = require('../utils/extractPublicId');
 const { sendEnquiryNotification } = require('../utils/emailService');
 const { getPublicClientUrl } = require('../utils/clientUrl');
+const { contains, paginate, toNumber } = require('../utils/queryHelpers');
+
+// What the public is allowed to see about a dealer on a listing.
+const PUBLIC_DEALER_FIELDS = 'businessName businessAddress region phone whatsapp logo coverImage description isVerified createdAt';
+
+// Fields a dealer may set on their own listing. Everything else on the model
+// (isApproved, isFeatured, isBoosted, isActive, views, dealer…) is controlled
+// by the platform, so the update is built from this list rather than by
+// deleting a few known-bad keys from req.body.
+const TEXT_FIELDS   = ['title', 'make', 'model', 'color', 'description', 'location', 'region'];
+const NUMBER_FIELDS = ['year', 'price', 'mileage'];
+const ENUM_FIELDS   = ['currency', 'mileageUnit', 'transmission', 'fuelType', 'condition', 'bodyType'];
+const REQUIRED_FIELDS = ['title', 'make', 'model', 'year', 'price'];
+
+// Changing any of these changes what car is being sold, so the listing goes
+// back to the admin for review. Price, mileage, colour and location edits
+// stay live — dealers adjust those often and they don't change the car.
+const REVIEW_FIELDS = ['title', 'make', 'model', 'year', 'condition', 'description'];
+
+// Ids of dealers who are not currently approved (pending, rejected, suspended).
+// Their listings stay out of everything public.
+const unapprovedDealerIds = async () => {
+  const rows = await Dealer.find({ isApproved: false }).select('_id').lean();
+  return rows.map((d) => d._id);
+};
 
 // GET /api/listings  (public)
 const getListings = async (req, res) => {
   const {
     make, model, year, minPrice, maxPrice, region, condition,
     transmission, fuelType, bodyType, isBoosted,
-    page = 1, limit = 20,
   } = req.query;
 
   const filter = { isActive: true, isApproved: true };
 
-  if (make)         filter.make = { $regex: make, $options: 'i' };
-  if (model)        filter.model = { $regex: model, $options: 'i' };
-  if (year)         filter.year = Number(year);
-  if (region)       filter.region = { $regex: region, $options: 'i' };
+  const hiddenDealers = await unapprovedDealerIds();
+  if (hiddenDealers.length) filter.dealer = { $nin: hiddenDealers };
+
+  if (make)         filter.make = contains(make);
+  if (model)        filter.model = contains(model);
+  if (toNumber(year) !== undefined) filter.year = toNumber(year);
+  if (region)       filter.region = contains(region);
   if (condition)    filter.condition = condition;
   if (transmission) filter.transmission = transmission;
   if (fuelType)     filter.fuelType = fuelType;
   if (bodyType)     filter.bodyType = bodyType;
   if (isBoosted)    filter.isBoosted = isBoosted === 'true';
-  if (minPrice || maxPrice) {
+  const min = toNumber(minPrice);
+  const max = toNumber(maxPrice);
+  if ((minPrice && min !== undefined) || (maxPrice && max !== undefined)) {
     filter.price = {};
-    if (minPrice) filter.price.$gte = Number(minPrice);
-    if (maxPrice) filter.price.$lte = Number(maxPrice);
+    if (minPrice && min !== undefined) filter.price.$gte = min;
+    if (maxPrice && max !== undefined) filter.price.$lte = max;
   }
 
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-  const skip     = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
   const [listings, total] = await Promise.all([
     Listing.find(filter)
@@ -54,14 +81,33 @@ const getListings = async (req, res) => {
 
 // GET /api/listings/:id  (public)
 const getListing = async (req, res) => {
-  const listing = await Listing.findById(req.params.id).populate('dealer');
+  const listing = await Listing.findById(req.params.id).populate('dealer', `${PUBLIC_DEALER_FIELDS} isApproved`);
 
-  if (!listing || !listing.isActive || !listing.isApproved) {
+  if (!listing || !listing.isActive || !listing.isApproved || !listing.dealer || !listing.dealer.isApproved) {
     res.status(404);
     throw new Error('Listing not found');
   }
 
-  await Listing.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+  await Listing.updateOne({ _id: listing._id }, { $inc: { views: 1 } });
+
+  res.status(200).json(listing);
+};
+
+// GET /api/listings/dealer/mine/:id  (dealer only)
+// The edit form loads from here. The public endpoint above hides pending and
+// inactive listings, so a dealer could never open one of those to fix it.
+const getDealerListing = async (req, res) => {
+  const dealer = await Dealer.findOne({ user: req.user._id });
+  if (!dealer) {
+    res.status(404);
+    throw new Error('Dealer profile not found');
+  }
+
+  const listing = await Listing.findOne({ _id: req.params.id, dealer: dealer._id });
+  if (!listing) {
+    res.status(404);
+    throw new Error('Listing not found');
+  }
 
   res.status(200).json(listing);
 };
@@ -92,13 +138,23 @@ const createListing = async (req, res) => {
     throw new Error('At least one image is required');
   }
 
+  if (toNumber(year) === undefined || toNumber(price) === undefined || toNumber(price) <= 0) {
+    res.status(400);
+    throw new Error('year and price must be valid numbers');
+  }
+
+  // A select left on its blank option arrives as '' — store nothing rather
+  // than failing the schema's enum check.
+  const opt = (v) => (v === '' ? undefined : v);
+
   const listing = await Listing.create({
     dealer: dealer._id,
     title, make, model,
     year: Number(year),
     price: Number(price),
-    currency, mileage: mileage ? Number(mileage) : undefined,
-    mileageUnit, transmission, fuelType, condition, bodyType,
+    currency: opt(currency), mileage: toNumber(mileage || undefined),
+    mileageUnit: opt(mileageUnit), transmission: opt(transmission), fuelType: opt(fuelType),
+    condition: opt(condition), bodyType: opt(bodyType),
     color, description, location, region,
     images: imageUrls,
     isApproved: false,
@@ -128,9 +184,30 @@ const updateListing = async (req, res) => {
     throw new Error('Not authorized to update this listing');
   }
 
-  const forbidden = ['dealer', 'isApproved', 'views', 'enquiryCount', 'isBoosted', 'boostExpiry', 'keptImages'];
-  const updates = { ...req.body };
-  forbidden.forEach((f) => delete updates[f]);
+  // Build the update from the allow-list only.
+  const updates = {};
+  for (const f of TEXT_FIELDS) {
+    if (typeof req.body[f] === 'string') updates[f] = req.body[f].trim();
+  }
+  for (const f of NUMBER_FIELDS) {
+    if (req.body[f] === undefined || req.body[f] === '') continue;
+    const n = toNumber(req.body[f]);
+    if (n === undefined || n < 0) {
+      res.status(400);
+      throw new Error(`${f} must be a valid number`);
+    }
+    updates[f] = n;
+  }
+  for (const f of ENUM_FIELDS) {
+    // An empty select in the form means "leave as is", not "set to empty".
+    if (typeof req.body[f] === 'string' && req.body[f] !== '') updates[f] = req.body[f];
+  }
+  for (const f of REQUIRED_FIELDS) {
+    if (f in updates && (updates[f] === '' || updates[f] === 0)) {
+      res.status(400);
+      throw new Error(`${f} is required`);
+    }
+  }
 
   const newUrls = req.files && req.files.length > 0
     ? req.files.map((f) => f.path || f.secure_url || f.url)
@@ -195,12 +272,22 @@ const updateListing = async (req, res) => {
     updates.images = [...(listing.images || []), ...newUrls].slice(0, 10);
   }
 
+  // Did this edit change what car is being sold? If so, it needs a fresh review.
+  const same = (a, b) => String(a ?? '') === String(b ?? '');
+  const contentChanged = REVIEW_FIELDS.some((f) => f in updates && !same(updates[f], listing[f]));
+  const imagesChanged = updates.images !== undefined &&
+    (updates.images.length !== (listing.images || []).length ||
+     updates.images.some((u, i) => u !== listing.images[i]));
+  const needsReview = listing.isApproved && (contentChanged || imagesChanged);
+  if (needsReview) updates.isApproved = false;
+
   const updated = await Listing.findByIdAndUpdate(req.params.id, updates, {
     new: true,
     runValidators: true,
   });
 
-  res.status(200).json(updated);
+  // `resubmitted` lets the dealer UI explain why the listing left the site.
+  res.status(200).json({ ...updated.toObject(), resubmitted: needsReview });
 };
 
 // DELETE /api/listings/:id  (dealer only — soft delete)
@@ -253,9 +340,18 @@ const deleteListingImage = async (req, res) => {
     throw new Error('imageUrl is required');
   }
 
+  if (!listing.images.includes(imageUrl)) {
+    res.status(404);
+    throw new Error('That image is not on this listing');
+  }
+  if (listing.images.length <= 1) {
+    res.status(400);
+    throw new Error('A listing must have at least one image');
+  }
+
   const publicId = extractPublicId(imageUrl);
   if (publicId) {
-    await cloudinary.uploader.destroy(publicId);
+    try { await cloudinary.uploader.destroy(publicId); } catch (err) { /* orphaned asset only */ }
   }
 
   const updatedImages = listing.images.filter((url) => url !== imageUrl);
@@ -276,10 +372,7 @@ const getDealerListings = async (req, res) => {
     throw new Error('Dealer profile not found');
   }
 
-  const { page = 1, limit = 20 } = req.query;
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-  const skip     = (pageNum - 1) * limitNum;
+  const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
   const [listings, total] = await Promise.all([
     Listing.find({ dealer: dealer._id })
@@ -299,17 +392,26 @@ const getDealerListings = async (req, res) => {
 
 // POST /api/listings/:id/enquiry  (public + authenticated)
 const submitEnquiry = async (req, res) => {
-  const listing = await Listing.findById(req.params.id);
-  if (!listing || !listing.isActive || !listing.isApproved) {
+  const listing = await Listing.findById(req.params.id).populate('dealer', 'isApproved');
+  if (!listing || !listing.isActive || !listing.isApproved || !listing.dealer || !listing.dealer.isApproved) {
     res.status(404);
     throw new Error('Listing not found');
   }
 
-  const { message, type, guestName, guestEmail, guestPhone } = req.body;
+  const { type, guestName, guestEmail, guestPhone } = req.body;
+  const message = typeof req.body.message === 'string' ? req.body.message.trim() : '';
 
   if (!message) {
     res.status(400);
     throw new Error('Message is required');
+  }
+  if (message.length > 2000) {
+    res.status(400);
+    throw new Error('Message is too long (2000 characters maximum)');
+  }
+  if (!req.user && guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(guestEmail))) {
+    res.status(400);
+    throw new Error('Enter a valid email address');
   }
 
   // Guest validation — only required if not authenticated
@@ -320,7 +422,7 @@ const submitEnquiry = async (req, res) => {
 
   const enquiry = await Enquiry.create({
     listing: listing._id,
-    dealer: listing.dealer,
+    dealer: listing.dealer._id,
     user: req.user ? req.user._id : undefined,
     guestName: req.user ? undefined : guestName,
     guestEmail: req.user ? undefined : guestEmail,
@@ -334,7 +436,7 @@ const submitEnquiry = async (req, res) => {
   // Fire-and-forget email notification to dealer
   (async () => {
     try {
-      const dealerWithUser = await Dealer.findById(listing.dealer).populate('user', 'email name');
+      const dealerWithUser = await Dealer.findById(listing.dealer._id).populate('user', 'email name');
       if (dealerWithUser?.user?.email) {
         const senderName  = req.user ? req.user.name  : guestName;
         const senderEmail = req.user ? req.user.email : guestEmail;
@@ -365,5 +467,6 @@ module.exports = {
   deleteListing,
   deleteListingImage,
   getDealerListings,
+  getDealerListing,
   submitEnquiry,
 };

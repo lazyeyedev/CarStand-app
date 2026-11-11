@@ -8,6 +8,13 @@ const SITE   = getPublicClientUrl();
 // never needs a code change.
 const SITE_HOST = SITE.replace(/^https?:\/\//, '').replace(/^www\./, '');
 
+// Everything a visitor typed (names, emails, phone numbers, messages, listing
+// titles) is escaped before it goes into an email. Without this, anyone could
+// send dealers emails containing their own links and markup from our address.
+const esc = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 const TYPE_LABEL = {
   general:    'General Enquiry',
   price:      'Price Negotiation',
@@ -41,7 +48,7 @@ const sendEnquiryNotification = async ({
         <!-- Body -->
         <tr>
           <td style="padding:32px;">
-            <p style="margin:0 0 8px;color:#333;font-size:15px;">Hi ${dealerName},</p>
+            <p style="margin:0 0 8px;color:#333;font-size:15px;">Hi ${esc(dealerName)},</p>
             <p style="margin:0 0 24px;color:#555;font-size:14px;line-height:1.6;">
               You have received a new enquiry on your listing. Details below.
             </p>
@@ -52,10 +59,10 @@ const sendEnquiryNotification = async ({
               <tr>
                 <td style="padding:16px 20px;">
                   <div style="color:#888;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Listing</div>
-                  <div style="color:#111;font-size:15px;font-weight:700;">${listingTitle}</div>
+                  <div style="color:#111;font-size:15px;font-weight:700;">${esc(listingTitle)}</div>
                   <div style="margin-top:8px;">
                     <span style="background:#c9a84c22;color:#a07830;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase;">
-                      ${typeLabel}
+                      ${esc(typeLabel)}
                     </span>
                   </div>
                 </td>
@@ -68,19 +75,19 @@ const sendEnquiryNotification = async ({
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="padding:4px 0;color:#555;font-size:13px;width:80px;">Name</td>
-                  <td style="padding:4px 0;color:#111;font-size:13px;font-weight:600;">${senderName}</td>
+                  <td style="padding:4px 0;color:#111;font-size:13px;font-weight:600;">${esc(senderName)}</td>
                 </tr>
                 <tr>
                   <td style="padding:4px 0;color:#555;font-size:13px;">Email</td>
                   <td style="padding:4px 0;font-size:13px;">
-                    <a href="mailto:${senderEmail}" style="color:#c9a84c;">${senderEmail}</a>
+                    <a href="mailto:${esc(senderEmail)}" style="color:#c9a84c;">${esc(senderEmail)}</a>
                   </td>
                 </tr>
                 ${senderPhone ? `
                 <tr>
                   <td style="padding:4px 0;color:#555;font-size:13px;">Phone</td>
                   <td style="padding:4px 0;color:#111;font-size:13px;">
-                    <a href="tel:${senderPhone}" style="color:#c9a84c;">${senderPhone}</a>
+                    <a href="tel:${esc(senderPhone)}" style="color:#c9a84c;">${esc(senderPhone)}</a>
                   </td>
                 </tr>` : ''}
               </table>
@@ -90,7 +97,7 @@ const sendEnquiryNotification = async ({
             <div style="margin-bottom:28px;">
               <div style="color:#888;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Message</div>
               <div style="background:#f9f9f9;border-left:3px solid #c9a84c;padding:14px 16px;color:#333;font-size:14px;line-height:1.7;border-radius:0 4px 4px 0;">
-                ${message.replace(/\n/g, '<br>')}
+                ${esc(message).replace(/\n/g, '<br>')}
               </div>
             </div>
 
@@ -126,7 +133,7 @@ const sendEnquiryNotification = async ({
   await resend.emails.send({
     from:    FROM,
     to:      dealerEmail,
-    subject: `New Enquiry: ${listingTitle}`,
+    subject: `New Enquiry: ${String(listingTitle).replace(/[\r\n]+/g, ' ')}`,
     html,
   });
 };
@@ -151,7 +158,7 @@ const sendWelcomeEmail = async ({ email, name }) => {
         <!-- Body -->
         <tr>
           <td style="padding:32px;">
-            <h2 style="margin:0 0 16px;color:#111;font-size:20px;">Welcome, ${name} 👋</h2>
+            <h2 style="margin:0 0 16px;color:#111;font-size:20px;">Welcome, ${esc(name)} 👋</h2>
             <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.7;">
               You're now on Ghana's premier car marketplace. Here's what you can do:
             </p>
@@ -226,7 +233,7 @@ const sendPasswordResetEmail = async ({ email, name, resetUrl }) => {
           <td style="padding:32px;">
             <h2 style="margin:0 0 16px;color:#111;font-size:20px;">Reset your password</h2>
             <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.7;">
-              Hi ${name}, we received a request to reset the password on your Carmium account.
+              Hi ${esc(name)}, we received a request to reset the password on your Carmium account.
               This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
             </p>
 

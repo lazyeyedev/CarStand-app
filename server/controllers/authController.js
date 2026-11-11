@@ -71,7 +71,9 @@ const registerDealer = async (req, res) => {
   const existing = await User.findOne({ email });
   if (existing) {
     res.status(400);
-    throw new Error('Email already registered');
+    throw new Error(existing.role === 'user'
+      ? 'That email already has a buyer account. Sign in, then choose "Become a dealer" to upgrade it.'
+      : 'Email already registered');
   }
 
   const user = await User.create({ name, email, password, role: 'dealer', phone });
@@ -97,6 +99,74 @@ const registerDealer = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      phone: user.phone,
+    },
+    dealer: {
+      _id: dealer._id,
+      businessName: dealer.businessName,
+      businessAddress: dealer.businessAddress,
+      region: dealer.region,
+      phone: dealer.phone,
+      subscriptionTier: dealer.subscriptionTier,
+      isApproved: dealer.isApproved,
+    },
+  });
+};
+
+// POST /api/auth/upgrade-to-dealer  (protected — buyers only)
+// Turns the signed-in buyer account into a dealer account: same login, same
+// email, same enquiry history. The dealership starts unapproved, exactly like
+// a fresh dealer registration, so the admin review step is unchanged.
+const upgradeToDealer = async (req, res) => {
+  if (req.user.role !== 'user') {
+    res.status(400);
+    throw new Error(req.user.role === 'dealer'
+      ? 'This account is already a dealer account'
+      : 'This account cannot be upgraded');
+  }
+
+  const clean = (v) => (typeof v === 'string' ? v.trim() : '');
+  const businessName    = clean(req.body.businessName);
+  const businessAddress = clean(req.body.businessAddress);
+  const region          = clean(req.body.region);
+  const phone           = clean(req.body.phone) || req.user.phone;
+  const whatsapp        = clean(req.body.whatsapp);
+
+  if (!businessName || !businessAddress || !region || !phone) {
+    res.status(400);
+    throw new Error('Please provide businessName, businessAddress, region and phone');
+  }
+
+  // Dealer.user is unique, so a double-submit can't create two dealerships.
+  let dealer = await Dealer.findOne({ user: req.user._id });
+  if (!dealer) {
+    dealer = await Dealer.create({
+      user: req.user._id, businessName, businessAddress, region, phone, whatsapp,
+    });
+  }
+
+  let user;
+  try {
+    user = await User.findById(req.user._id);
+    user.role = 'dealer';
+    if (!user.phone) user.phone = phone;
+    await user.save();
+  } catch (err) {
+    // Don't leave a dealership attached to an account that is still a buyer.
+    await Dealer.deleteOne({ _id: dealer._id });
+    throw err;
+  }
+
+  const token = generateToken({ id: user._id, role: user.role });
+
+  res.status(200).json({
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
       phone: user.phone,
     },
     dealer: {
@@ -290,6 +360,7 @@ const resetPassword = async (req, res) => {
 module.exports = {
   registerUser,
   registerDealer,
+  upgradeToDealer,
   login,
   getMe,
   changePassword,
