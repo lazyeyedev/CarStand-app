@@ -30,7 +30,10 @@ export default function ChangePasswordCard() {
     if (!validate()) return;
     setSaving(true);
     try {
-      await axiosInstance.put('/auth/change-password', { currentPassword: pw.currentPassword, newPassword: pw.newPassword });
+      const { data } = await axiosInstance.put('/auth/change-password', { currentPassword: pw.currentPassword, newPassword: pw.newPassword });
+      // The server ends every session issued before the change and returns a
+      // fresh token for this one — store it or the next request signs us out.
+      if (data?.token) localStorage.setItem('carstand_token', data.token);
       toast.success('Password changed');
       setPw(EMPTY);
     } catch (err) {

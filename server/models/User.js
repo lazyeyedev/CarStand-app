@@ -24,8 +24,10 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+// Mongoose 9 no longer passes `next` to pre hooks — calling it throws
+// "next is not a function". Async hooks just return.
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 

@@ -197,7 +197,12 @@ const changePassword = async (req, res) => {
   user.passwordChangedAt = new Date();
   await user.save(); // triggers pre-save bcrypt hook
 
-  res.status(200).json({ message: 'Password updated successfully' });
+  // Every token issued before passwordChangedAt is now rejected by protect,
+  // including this session's. Hand back a fresh one so the person who just
+  // changed their password stays signed in while every other session ends.
+  const token = generateToken({ id: user._id, role: user.role });
+
+  res.status(200).json({ message: 'Password updated successfully', token });
 };
 
 // POST /api/auth/forgot-password
