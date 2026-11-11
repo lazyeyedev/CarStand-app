@@ -117,8 +117,19 @@ export const CATEGORIES = [
         audience: 'all',
         q: 'What does it cost to list?',
         answer: [
-          'Registering a dealership and listing cars is free on the Basic plan.',
+          'Registering a dealership and listing cars is free on the Basic plan. Featuring a listing at the top of search is an optional paid boost.',
         ],
+      },
+      {
+        id: 'boost',
+        audience: 'dealer',
+        q: 'How do I feature (boost) a listing?',
+        answer: [
+          'Open My listings and choose Boost next to a live listing. Pick 7, 14 or 30 days and pay on Paystack by mobile money or card.',
+          'A featured listing is shown above standard listings in search, carries the Featured badge, and appears in the Featured row on the home page. It starts as soon as payment is confirmed.',
+          'Only live listings can be boosted. Buying again while a listing is still featured adds the new days to the end.',
+        ],
+        links: [{ to: '/dealer/listings', label: 'My listings' }],
       },
       {
         id: 'dealer-enquiries',

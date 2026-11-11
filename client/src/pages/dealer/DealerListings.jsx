@@ -19,6 +19,9 @@ const statusOf = (l) => {
   return <span className="badge badge-success">Live</span>;
 };
 
+const fmtShort = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const featuredUntil = (l) => (l.isBoosted && l.boostExpiry && new Date(l.boostExpiry) > new Date() ? l.boostExpiry : null);
+
 export default function DealerListings() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,7 @@ export default function DealerListings() {
       />
 
       <div className="card">
-        {loading ? <TableSkeleton rows={5} cols={5} /> : listings.length === 0 ? (
+        {loading ? <TableSkeleton rows={5} cols={6} /> : listings.length === 0 ? (
           <EmptyState icon="car" title="No listings yet" action={<Link to="/dealer/listings/create" className="btn btn-primary"><Icon name="plus" /> Create your first listing</Link>}>
             Add a car with photos, price and details. It goes live once it's reviewed.
           </EmptyState>
@@ -79,7 +82,6 @@ export default function DealerListings() {
                   <th scope="col">Status</th>
                   <th scope="col">Views</th>
                   <th scope="col">Enquiries</th>
-                  <th scope="col">Listed</th>
                   <th scope="col" style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -92,20 +94,26 @@ export default function DealerListings() {
                           style={{ width: 72, height: 50, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)', flexShrink: 0 }}
                           onError={(e) => { e.currentTarget.src = PLACEHOLDER; }} />
                         <div style={{ minWidth: 0 }}>
-                          <Link to={`/listings/${l._id}`} className="strong truncate" style={{ display: 'block', maxWidth: 240, color: 'var(--color-text)' }}>{l.title}</Link>
+                          <Link to={`/listings/${l._id}`} className="strong truncate" style={{ display: 'block', maxWidth: 200, color: 'var(--color-text)' }}>{l.title}</Link>
                           <div className="text-xs muted mt-2" style={{ textTransform: 'capitalize' }}>{[l.condition, l.bodyType].filter(Boolean).join(' · ')}</div>
+                          <div className="text-xs muted" style={{ marginTop: 2 }}>Listed {new Date(l.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                         </div>
                       </div>
                     </td>
                     <td className="strong" style={{ whiteSpace: 'nowrap', color: 'var(--red-text)' }}>{fmtPrice(l.price, l.currency)}</td>
-                    <td>{statusOf(l)}</td>
+                    <td>
+                      {statusOf(l)}
+                      {featuredUntil(l) && <div className="text-xs mt-2" style={{ whiteSpace: 'nowrap', color: 'var(--red-text)', fontWeight: 600 }}>Featured until {fmtShort(featuredUntil(l))}</div>}
+                    </td>
                     <td>{l.views || 0}</td>
                     <td>{l.enquiryCount || 0}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{new Date(l.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                     <td>
                       <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
-                        <Link to={`/dealer/listings/edit/${l._id}`} className="btn btn-secondary btn-sm"><Icon name="edit" /> Edit</Link>
-                        <button type="button" className="btn btn-danger btn-sm" onClick={() => setToDelete(l)} aria-label={`Remove ${l.title}`}>
+                        {l.isActive && l.isApproved && (
+                          <Link to={`/dealer/boost?listingId=${l._id}`} className="btn btn-outline-red btn-sm"><Icon name="zap" /> {featuredUntil(l) ? 'Extend' : 'Boost'}</Link>
+                        )}
+                        <Link to={`/dealer/listings/edit/${l._id}`} className="btn btn-secondary btn-sm" aria-label={`Edit ${l.title}`} title="Edit"><Icon name="edit" /></Link>
+                        <button type="button" className="btn btn-danger btn-sm" onClick={() => setToDelete(l)} aria-label={`Remove ${l.title}`} title="Remove">
                           <Icon name="trash" />
                         </button>
                       </div>

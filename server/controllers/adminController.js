@@ -5,6 +5,7 @@ const Enquiry = require('../models/Enquiry');
 const Boost = require('../models/Boost');
 const { cloudinary } = require('../utils/cloudinaryUpload');
 const { contains, paginate } = require('../utils/queryHelpers');
+const { expireBoosts } = require('../utils/boostService');
 
 // GET /api/admin/stats
 const getDashboardStats = async (req, res) => {
@@ -394,20 +395,25 @@ const getAllEnquiries = async (req, res) => {
 
 // GET /api/admin/boosts
 const getBoosts = async (req, res) => {
-  const { page = 1, limit = 20 } = req.query;
+  await expireBoosts({ force: true });
   const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 
-  const [boosts, total] = await Promise.all([
-    Boost.find({ status: 'active' })
+  // All boosts, newest first — expired ones are the revenue history.
+  const [boosts, total, revenue] = await Promise.all([
+    Boost.find({})
       .populate('listing', 'title make model year')
       .populate('dealer', 'businessName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum),
-    Boost.countDocuments({ status: 'active' }),
+    Boost.countDocuments({}),
+    Boost.find({}).select('amountPaid').lean(),
   ]);
 
-  res.status(200).json({ boosts, total, page: pageNum, totalPages: Math.ceil(total / limitNum) });
+  res.status(200).json({
+    boosts, total, page: pageNum, totalPages: Math.ceil(total / limitNum),
+    totalRevenue: revenue.reduce((sum, b) => sum + (b.amountPaid || 0), 0),
+  });
 };
 
 module.exports = {

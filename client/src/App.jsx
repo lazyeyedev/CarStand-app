@@ -23,6 +23,8 @@ import DealerListings      from './pages/dealer/DealerListings';
 import DealerCreateListing from './pages/dealer/DealerCreateListing';
 import DealerEditListing   from './pages/dealer/DealerEditListing';
 import DealerProfile       from './pages/dealer/DealerProfile';
+import DealerBoost         from './pages/dealer/DealerBoost';
+import DealerBoostSuccess  from './pages/dealer/DealerBoostSuccess';
 
 import UserProfile         from './pages/user/UserProfile';
 import UserEnquiries       from './pages/user/UserEnquiries';
@@ -102,6 +104,8 @@ function App() {
             <Route path="/dealer/listings/create"   element={<DealerCreateListing />} />
             <Route path="/dealer/listings/edit/:id" element={<DealerEditListing />} />
             <Route path="/dealer/profile"           element={<DealerProfile />} />
+            <Route path="/dealer/boost"             element={<DealerBoost />} />
+            <Route path="/dealer/boost/success"     element={<DealerBoostSuccess />} />
           </Route>
 
           {/* Protected — admin only, redirects to /admin/login */}

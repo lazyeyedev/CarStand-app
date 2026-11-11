@@ -563,3 +563,16 @@ img { height: auto; }
 }
 @media (prefers-reduced-motion: reduce) { .support-panel { animation: none; } }
 @media print { .support { display: none; } }
+
+/* ---------- Boost purchase (DealerBoost / DealerBoostSuccess) ---------- */
+.boost-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3); }
+.boost-option { display: flex; flex-direction: column; gap: .2rem; padding: var(--sp-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface-2); cursor: pointer; transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
+.boost-option:hover { border-color: var(--red-line); }
+.boost-option.is-selected { border-color: var(--red); background: var(--red-soft); box-shadow: inset 0 0 0 1px var(--red); }
+.boost-option:focus-within { outline: 2px solid var(--red-text); outline-offset: 2px; }
+.boost-option-days { font-weight: 700; color: var(--color-text); }
+.boost-option-price { font-size: var(--fs-xl); font-weight: 800; color: var(--red-text); }
+.boost-receipt { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); padding: var(--sp-4); text-align: left; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.boost-receipt dt { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 2px; }
+.boost-receipt dd { font-size: var(--fs-sm); font-weight: 600; color: var(--color-text); }
+@media (max-width: 480px) { .boost-receipt { grid-template-columns: 1fr; } }

@@ -6,6 +6,7 @@ const extractPublicId = require('../utils/extractPublicId');
 const { sendEnquiryNotification } = require('../utils/emailService');
 const { getPublicClientUrl } = require('../utils/clientUrl');
 const { contains, paginate, toNumber } = require('../utils/queryHelpers');
+const { expireBoosts } = require('../utils/boostService');
 
 // What the public is allowed to see about a dealer on a listing.
 const PUBLIC_DEALER_FIELDS = 'businessName businessAddress region phone whatsapp logo coverImage description isVerified createdAt';
@@ -37,6 +38,8 @@ const getListings = async (req, res) => {
     make, model, year, minPrice, maxPrice, region, condition,
     transmission, fuelType, bodyType, isBoosted,
   } = req.query;
+
+  await expireBoosts();
 
   const filter = { isActive: true, isApproved: true };
 
@@ -371,6 +374,8 @@ const getDealerListings = async (req, res) => {
     res.status(404);
     throw new Error('Dealer profile not found');
   }
+
+  await expireBoosts();
 
   const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
 

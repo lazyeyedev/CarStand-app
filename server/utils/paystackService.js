@@ -4,6 +4,7 @@ const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
 const paystackClient = axios.create({
   baseURL: 'https://api.paystack.co',
+  timeout: 20000,
   headers: {
     Authorization: `Bearer ${PAYSTACK_SECRET}`,
     'Content-Type': 'application/json',
@@ -13,7 +14,7 @@ const paystackClient = axios.create({
 const initializePayment = async ({ email, amount, metadata, callbackUrl }) => {
   const response = await paystackClient.post('/transaction/initialize', {
     email,
-    amount: Math.round(amount * 100), // GHS to kobo
+    amount: Math.round(amount * 100), // GHS to pesewas
     metadata,
     callback_url: callbackUrl,
     currency: 'GHS',
@@ -24,7 +25,7 @@ const initializePayment = async ({ email, amount, metadata, callbackUrl }) => {
 };
 
 const verifyPayment = async (reference) => {
-  const response = await paystackClient.get(`/transaction/verify/${reference}`);
+  const response = await paystackClient.get(`/transaction/verify/${encodeURIComponent(reference)}`);
   const transaction = response.data.data;
 
   if (transaction.status !== 'success') {

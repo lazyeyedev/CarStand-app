@@ -4,12 +4,7 @@ const Listing = require('../models/Listing');
 const Dealer  = require('../models/Dealer');
 const { initializePayment, verifyPayment } = require('../utils/paystackService');
 const { getPublicClientUrl } = require('../utils/clientUrl');
-
-const PRICING = {
-  featured: { 7: 50,  14: 90,  30: 150 },
-  top:      { 7: 80,  14: 140, 30: 220 },
-  banner:   { 7: 120, 14: 200, 30: 320 },
-};
+const { PRICING, priceFor, activateBoost } = require('../utils/boostService');
 
 // GET /api/boosts/pricing  (public)
 const getBoostPricing = (req, res) => {
@@ -18,21 +13,26 @@ const getBoostPricing = (req, res) => {
 
 // POST /api/boosts/initialize  (dealer only)
 const initializeBoost = async (req, res) => {
-  const { listingId, boostType, durationDays } = req.body;
+  const { listingId, boostType = 'featured' } = req.body;
+  const days = parseInt(req.body.durationDays, 10);
 
-  if (!listingId || !boostType || !durationDays) {
+  if (!listingId || !days) {
     res.status(400);
-    throw new Error('listingId, boostType, and durationDays are required');
+    throw new Error('listingId and durationDays are required');
   }
 
-  const days = parseInt(durationDays);
-
-  if (!PRICING[boostType] || !PRICING[boostType][days]) {
+  const amount = priceFor(boostType, days);
+  if (!amount) {
     res.status(400);
-    throw new Error(`Invalid boost type or duration. Valid types: featured, top, banner. Valid durations: 7, 14, 30`);
+    throw new Error('Choose a boost of 7, 14 or 30 days');
   }
 
-  const dealer = await Dealer.findOne({ user: req.user._id }).populate('user', 'email');
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    res.status(503);
+    throw new Error('Payments are not set up yet. Please try again later.');
+  }
+
+  const dealer = await Dealer.findOne({ user: req.user._id });
   if (!dealer) {
     res.status(404);
     throw new Error('Dealer profile not found');
@@ -44,23 +44,34 @@ const initializeBoost = async (req, res) => {
     throw new Error('Listing not found or does not belong to your account');
   }
 
-  const amount = PRICING[boostType][days];
+  // Don't take money for a listing the public can't see.
+  if (!dealer.isApproved || !listing.isApproved || !listing.isActive) {
+    res.status(400);
+    throw new Error('Only live listings can be boosted. This one is not live yet.');
+  }
 
-  const { authorization_url, reference } = await initializePayment({
-    email: dealer.user.email,
-    amount,
-    metadata: {
-      listingId:   listingId,
-      boostType:   boostType,
-      durationDays: days,
-      dealerId:    dealer._id.toString(),
-    },
-    callbackUrl: `${getPublicClientUrl()}/dealer/boost/success`,
-  });
+  let payment;
+  try {
+    payment = await initializePayment({
+      email: req.user.email,
+      amount,
+      metadata: {
+        listingId:    listing._id.toString(),
+        boostType,
+        durationDays: days,
+        dealerId:     dealer._id.toString(),
+      },
+      callbackUrl: `${getPublicClientUrl()}/dealer/boost/success`,
+    });
+  } catch (err) {
+    console.error('Paystack initialize failed:', err.response?.data || err.message);
+    res.status(502);
+    throw new Error('The payment provider could not start this payment. Please try again.');
+  }
 
   res.status(200).json({
-    authorization_url,
-    reference,
+    authorization_url: payment.authorization_url,
+    reference: payment.reference,
     amount,
     boostType,
     durationDays: days,
@@ -68,106 +79,91 @@ const initializeBoost = async (req, res) => {
 };
 
 // POST /api/boosts/webhook  (public — Paystack server-to-server)
+// Mounted in server.js ahead of express.json() so req.body is the raw Buffer.
 const paystackWebhook = async (req, res) => {
   const signature = req.headers['x-paystack-signature'];
-  const rawBody   = req.body; // Buffer from express.raw()
+  const rawBody   = req.body;
 
   if (!signature || !Buffer.isBuffer(rawBody) || !process.env.PAYSTACK_SECRET_KEY) {
     return res.status(401).json({ message: 'Invalid signature' });
   }
 
-  // Verify signature
   const hash = crypto
     .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
     .update(rawBody)
     .digest('hex');
 
-  if (hash !== signature) {
+  const a = Buffer.from(hash);
+  const b = Buffer.from(String(signature));
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return res.status(401).json({ message: 'Invalid signature' });
   }
 
-  const event = JSON.parse(rawBody.toString());
-
-  // Only handle successful charges
-  if (event.event !== 'charge.success') {
-    return res.status(200).json({ received: true });
+  let event;
+  try {
+    event = JSON.parse(rawBody.toString());
+  } catch (err) {
+    return res.status(400).json({ message: 'Invalid payload' });
   }
 
-  const { reference, metadata, amount } = event.data;
-  const { listingId, boostType, durationDays, dealerId } = metadata;
-
-  // Idempotency — skip if already processed
-  const existing = await Boost.findOne({ paystackReference: reference });
-  if (existing) {
-    return res.status(200).json({ received: true });
+  if (event.event === 'charge.success' && event.data) {
+    try {
+      await activateBoost({
+        reference: event.data.reference,
+        amount:    event.data.amount,
+        currency:  event.data.currency,
+        metadata:  event.data.metadata,
+      });
+    } catch (err) {
+      // A payment that isn't a valid boost purchase is logged, not retried:
+      // answering non-200 would make Paystack resend the same event for days.
+      console.error('Webhook could not activate boost:', event.data.reference, err.message);
+    }
   }
-
-  const startDate = new Date();
-  const endDate   = new Date();
-  endDate.setDate(endDate.getDate() + parseInt(durationDays));
-
-  await Boost.create({
-    listing:           listingId,
-    dealer:            dealerId,
-    boostType,
-    durationDays:      parseInt(durationDays),
-    amountPaid:        amount / 100, // kobo back to GHS
-    currency:          'GHS',
-    startDate,
-    endDate,
-    paystackReference: reference,
-    status:            'active',
-  });
-
-  await Listing.findByIdAndUpdate(listingId, {
-    isBoosted:   true,
-    boostExpiry: endDate,
-  });
 
   res.status(200).json({ received: true });
 };
 
 // GET /api/boosts/verify/:reference  (dealer only)
+// The page Paystack sends the dealer back to calls this. It confirms the
+// payment with Paystack and activates the boost if the webhook hasn't already.
 const verifyBoostPayment = async (req, res) => {
   const { reference } = req.params;
 
-  // Verify with Paystack
-  const transaction = await verifyPayment(reference);
-
-  // If the webhook already processed this reference, just return it.
-  let boost = await Boost.findOne({ paystackReference: reference })
-    .populate('listing', 'title make model year');
-
-  // Fallback: webhook hasn't fired (e.g. unreachable on localhost, or delayed).
-  // Since Paystack already confirmed the payment above, activate the boost here too.
-  if (!boost) {
-    const { listingId, boostType, durationDays, dealerId } = transaction.metadata;
-
-    const startDate = new Date();
-    const endDate   = new Date();
-    endDate.setDate(endDate.getDate() + parseInt(durationDays));
-
-    boost = await Boost.create({
-      listing:           listingId,
-      dealer:            dealerId,
-      boostType,
-      durationDays:      parseInt(durationDays),
-      amountPaid:        transaction.amount / 100, // kobo back to GHS
-      currency:          'GHS',
-      startDate,
-      endDate,
-      paystackReference: reference,
-      status:            'active',
-    });
-
-    await Listing.findByIdAndUpdate(listingId, {
-      isBoosted:   true,
-      boostExpiry: endDate,
-    });
-
-    boost = await Boost.findById(boost._id).populate('listing', 'title make model year');
+  const dealer = await Dealer.findOne({ user: req.user._id });
+  if (!dealer) {
+    res.status(404);
+    throw new Error('Dealer profile not found');
   }
 
+  let transaction;
+  try {
+    transaction = await verifyPayment(reference);
+  } catch (err) {
+    res.status(400);
+    throw new Error('This payment could not be confirmed. If you were charged, contact support with your payment reference.');
+  }
+
+  // A dealer can only confirm their own purchase.
+  if (transaction.metadata?.dealerId !== dealer._id.toString()) {
+    res.status(404);
+    throw new Error('Payment not found');
+  }
+
+  let boost;
+  try {
+    boost = await activateBoost({
+      reference,
+      amount:   transaction.amount,
+      currency: transaction.currency,
+      metadata: transaction.metadata,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500);
+    throw err;
+  }
+
+  boost = await Boost.findById(boost._id).populate('listing', 'title make model year');
   res.status(200).json({ status: 'active', boost });
 };
 

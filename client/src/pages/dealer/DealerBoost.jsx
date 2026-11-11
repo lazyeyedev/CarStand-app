@@ -2,163 +2,133 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import DealerLayout from './DealerLayout';
+import Icon from '../../components/Icon';
+import { PageHeader } from '../../components/DashboardShell';
+import { fmtPrice } from '../../components/CarCard';
 import axiosInstance from '../../api/axiosInstance';
+import { getPlaceholder } from '../../utils/placeholder';
 
-const BOOST_INFO = {
-  featured: {
-    label: 'Featured',
-    description: 'Appear at the top of search results with a Featured badge. Maximum visibility.',
-  },
-  top: {
-    label: 'Top Listing',
-    description: 'Pin your listing above all standard results on the homepage and search pages.',
-  },
-  banner: {
-    label: 'Banner',
-    description: 'Premium banner placement across the platform. Highest exposure.',
-  },
-};
+const PLACEHOLDER = getPlaceholder(120, 84);
+const fmtDate = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-const DURATIONS = [7, 14, 30];
+const BENEFITS = [
+  'Shown above standard listings in search results',
+  'Featured badge on the listing and its card',
+  'Included in the Featured row on the home page',
+];
 
 export default function DealerBoost() {
-  const [searchParams]  = useSearchParams();
-  const navigate        = useNavigate();
-  const listingId       = searchParams.get('listingId');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const listingId = searchParams.get('listingId');
 
-  const [listing,     setListing]     = useState(null);
-  const [pricing,     setPricing]     = useState(null);
-  const [boostType,   setBoostType]   = useState('featured');
-  const [duration,    setDuration]    = useState(7);
-  const [loading,     setLoading]     = useState(true);
-  const [submitting,  setSubmitting]  = useState(false);
+  const [listing, setListing] = useState(null);
+  const [prices, setPrices] = useState(null); // { 7: 50, 14: 90, 30: 150 }
+  const [duration, setDuration] = useState(7);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!listingId) { navigate('/dealer/listings'); return; }
-
+    if (!listingId) { navigate('/dealer/listings', { replace: true }); return; }
     Promise.all([
-      axiosInstance.get(`/listings/${listingId}`),
+      axiosInstance.get(`/listings/dealer/mine/${listingId}`),
       axiosInstance.get('/boosts/pricing'),
     ]).then(([l, p]) => {
       setListing(l.data);
-      setPricing(p.data);
+      setPrices(p.data.featured || {});
     }).catch(() => {
-      toast.error('Failed to load listing or pricing');
-      navigate('/dealer/listings');
+      toast.error('That listing could not be loaded');
+      navigate('/dealer/listings', { replace: true });
     }).finally(() => setLoading(false));
   }, [listingId, navigate]);
 
-  const price = pricing?.[boostType]?.[duration] ?? 0;
+  const durations = prices ? Object.keys(prices).map(Number).sort((a, b) => a - b) : [];
+  const price = prices?.[duration] ?? 0;
+  const isLive = listing?.isApproved && listing?.isActive;
+  const featuredUntil = listing?.isBoosted && listing?.boostExpiry && new Date(listing.boostExpiry) > new Date()
+    ? listing.boostExpiry : null;
 
-  const handleProceed = async () => {
+  const pay = async () => {
     setSubmitting(true);
     try {
-      const { data } = await axiosInstance.post('/boosts/initialize', {
-        listingId,
-        boostType,
-        durationDays: duration,
-      });
-      window.location.href = data.authorization_url;
+      const { data } = await axiosInstance.post('/boosts/initialize', { listingId, boostType: 'featured', durationDays: duration });
+      window.location.href = data.authorization_url; // Paystack checkout
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to initialize payment');
+      toast.error(err.response?.data?.message || 'The payment could not be started. Try again.');
       setSubmitting(false);
     }
   };
 
-  const s = {
-    card:   { background:'#141414', border:'1px solid #2a2a2a', borderRadius:10, padding:'1.25rem', marginBottom:'1.25rem' },
-    sectH:  { color:'#c41e2a', fontSize:'0.75rem', fontWeight:700, letterSpacing:1, textTransform:'uppercase', marginBottom:'1rem', paddingBottom:'0.5rem', borderBottom:'1px solid #1e1e1e' },
-    option: (selected) => ({
-      border: `1px solid ${selected ? '#c41e2a' : '#2a2a2a'}`,
-      background: selected ? 'rgba(196,30,42,0.08)' : '#1a1a1a',
-      borderRadius:8, padding:'1rem', cursor:'pointer', transition:'all 0.15s',
-    }),
-    durBtn: (selected) => ({
-      flex:1, padding:'0.65rem', borderRadius:6, border:`1px solid ${selected ? '#c41e2a' : '#2a2a2a'}`,
-      background: selected ? '#c41e2a' : '#1a1a1a',
-      color: selected ? '#0d0d0d' : '#888',
-      fontWeight: selected ? 700 : 400, cursor:'pointer', fontSize:'0.9rem',
-    }),
-  };
-
-  if (loading) return (
-    <DealerLayout>
-      <div style={{ color:'#444', textAlign:'center', padding:'3rem' }}>Loading…</div>
-    </DealerLayout>
-  );
-
   return (
     <DealerLayout>
-      <div style={{ maxWidth:640, margin:'0 auto' }}>
-        <h1 style={{ color:'#ececec', fontSize:'1.4rem', fontWeight:700, marginBottom:'0.4rem' }}>
-          Boost Listing
-        </h1>
-        <p style={{ color:'#555', fontSize:'0.85rem', marginBottom:'1.75rem' }}>
-          {listing?.title}
-        </p>
+      <div style={{ maxWidth: 720 }}>
+        <PageHeader
+          back={{ to: '/dealer/listings', label: 'My listings' }}
+          title="Feature this listing"
+          subtitle="Put this car in front of more buyers for a set number of days."
+        />
 
-        {/* Boost type */}
-        <div style={s.card}>
-          <div style={s.sectH}>Select Boost Type</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-            {Object.entries(BOOST_INFO).map(([type, info]) => (
-              <div key={type} onClick={() => setBoostType(type)} style={s.option(boostType === type)}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <div>
-                    <div style={{ color:'#ececec', fontWeight:700, fontSize:'0.92rem', marginBottom:3 }}>
-                      {info.label}
-                    </div>
-                    <div style={{ color:'#666', fontSize:'0.8rem', lineHeight:1.5 }}>
-                      {info.description}
-                    </div>
+        {loading ? (
+          <div className="stack gap-4">{[110, 180, 120].map((h) => <div key={h} className="skeleton" style={{ height: h, borderRadius: 'var(--radius-md)' }} />)}</div>
+        ) : (
+          <div className="stack gap-6">
+            <section className="card card-pad row gap-4" aria-label="Listing">
+              <img src={listing.images?.[0] || PLACEHOLDER} alt="" width="120" height="84"
+                style={{ width: 120, height: 84, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)', flexShrink: 0 }}
+                onError={(e) => { e.currentTarget.src = PLACEHOLDER; }} />
+              <div style={{ minWidth: 0 }}>
+                <div className="truncate" style={{ fontWeight: 700, color: 'var(--color-text)' }}>{listing.title}</div>
+                <div className="red mt-2" style={{ fontWeight: 700 }}>{fmtPrice(listing.price, listing.currency)}</div>
+                {featuredUntil && <div className="text-sm muted mt-2">Already featured until {fmtDate(featuredUntil)}. Buying again adds days after that date.</div>}
+              </div>
+            </section>
+
+            {!isLive ? (
+              <div className="alert alert-warning" role="status">
+                <Icon name="alert" />
+                <div>Only live listings can be featured. This one is {listing.isActive ? 'still waiting for review' : 'inactive'}, so there is nothing for buyers to see yet.</div>
+              </div>
+            ) : (
+              <>
+                <section className="card" aria-labelledby="what-h">
+                  <div className="card-head"><h2 id="what-h" className="card-title">What you get</h2></div>
+                  <ul className="card-pad stack gap-3" style={{ listStyle: 'none' }}>
+                    {BENEFITS.map((b) => (
+                      <li key={b} className="row gap-3"><span className="red" style={{ display: 'inline-flex' }}><Icon name="checkCircle" /></span> {b}</li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="card" aria-labelledby="dur-h">
+                  <div className="card-head"><h2 id="dur-h" className="card-title">How long?</h2></div>
+                  <div className="card-pad boost-options" role="radiogroup" aria-labelledby="dur-h">
+                    {durations.map((d) => (
+                      <label key={d} className={`boost-option${duration === d ? ' is-selected' : ''}`}>
+                        <input type="radio" name="duration" className="sr-only" value={d} checked={duration === d} onChange={() => setDuration(d)} />
+                        <span className="boost-option-days">{d} days</span>
+                        <span className="boost-option-price">GHS {prices[d].toLocaleString()}</span>
+                        <span className="text-xs muted">GHS {(prices[d] / d).toFixed(2)} per day</span>
+                      </label>
+                    ))}
                   </div>
-                  {pricing && (
-                    <div style={{ color:'#c41e2a', fontWeight:800, fontSize:'0.9rem',
-                      marginLeft:'1rem', flexShrink:0 }}>
-                      from GHS {pricing[type][7]}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                </section>
 
-        {/* Duration */}
-        <div style={s.card}>
-          <div style={s.sectH}>Select Duration</div>
-          <div style={{ display:'flex', gap:'0.75rem' }}>
-            {DURATIONS.map(d => (
-              <button key={d} onClick={() => setDuration(d)} style={s.durBtn(duration === d)}>
-                {d} days
-              </button>
-            ))}
+                <section className="card card-pad row wrap gap-4" style={{ justifyContent: 'space-between' }} aria-label="Payment">
+                  <div>
+                    <div className="text-sm muted">Featured for {duration} days</div>
+                    <div className="price-lg">GHS {price.toLocaleString()}</div>
+                  </div>
+                  <button type="button" className="btn btn-primary btn-lg" onClick={pay} disabled={submitting || !price}>
+                    {submitting ? <><span className="spinner" /> Opening Paystack…</> : <><Icon name="card" /> Pay with Paystack</>}
+                  </button>
+                  <p className="text-sm muted" style={{ flexBasis: '100%' }}>
+                    You pay on Paystack's secure page by mobile money or card, then come straight back here. Featured status starts as soon as payment is confirmed.
+                  </p>
+                </section>
+              </>
+            )}
           </div>
-        </div>
-
-        {/* Summary */}
-        <div style={{ ...s.card, borderColor:'#c41e2a33', background:'#1a1700' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div>
-              <div style={{ color:'#888', fontSize:'0.78rem', marginBottom:4 }}>
-                {BOOST_INFO[boostType]?.label} · {duration} days
-              </div>
-              <div style={{ color:'#c41e2a', fontSize:'1.6rem', fontWeight:900 }}>
-                GHS {price.toLocaleString()}
-              </div>
-            </div>
-            <button onClick={handleProceed} disabled={submitting}
-              style={{ background:'#c41e2a', color:'#0d0d0d', border:'none', borderRadius:8,
-                padding:'0.85rem 1.75rem', fontWeight:800, fontSize:'0.95rem',
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                opacity: submitting ? 0.6 : 1 }}>
-              {submitting ? 'Redirecting…' : 'Proceed to Payment'}
-            </button>
-          </div>
-          <div style={{ color:'#444', fontSize:'0.75rem', marginTop:'0.75rem' }}>
-            You will be redirected to Paystack to complete payment securely.
-          </div>
-        </div>
+        )}
       </div>
     </DealerLayout>
   );
