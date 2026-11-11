@@ -129,7 +129,7 @@ export default function DealerProfile() {
               </section>
 
               <div className="row wrap between gap-4">
-                <p className="text-sm muted row gap-2"><Icon name="info" size={16} /> To change plan, contact the CarStand team.</p>
+                <p className="text-sm muted row gap-2"><Icon name="info" size={16} /> To change plan, contact the Carmium team.</p>
                 <button type="submit" className="btn btn-primary btn-lg" disabled={saving}>
                   {saving ? <><span className="spinner" /> Saving…</> : 'Save profile'}
                 </button>

@@ -35,7 +35,7 @@ export default function Login() {
     <AuthLayout
       title="Welcome back"
       subtitle="Sign in to manage your enquiries and listings."
-      footer={<>New to CarStand? <Link to="/register">Create an account</Link> or <Link to="/register/dealer">join as a dealer</Link></>}
+      footer={<>New to Carmium? <Link to="/register">Create an account</Link> or <Link to="/register/dealer">join as a dealer</Link></>}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="stack gap-4">
         <Field label="Email" type="email" autoComplete="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />

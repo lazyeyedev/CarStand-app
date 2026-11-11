@@ -47,7 +47,7 @@ export default function AdminLogin() {
           <SubmitButton loading={isSubmitting} loadingText="Signing in…">Sign in</SubmitButton>
         </form>
       </div>
-      <Link to="/" className="text-sm muted mt-6">Back to CarStand</Link>
+      <Link to="/" className="text-sm muted mt-6">Back to Carmium</Link>
     </main>
   );
 }

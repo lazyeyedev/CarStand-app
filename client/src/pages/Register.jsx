@@ -29,7 +29,7 @@ export default function Register() {
   const onSubmit = async (data) => {
     try {
       await registerUser({ name: data.name, email: data.email, phone: data.phone, password: data.password });
-      toast.success('Welcome to CarStand');
+      toast.success('Welcome to Carmium');
       navigate('/');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Your account could not be created. Try again.');

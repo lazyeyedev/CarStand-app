@@ -1,5 +1,5 @@
 // CLIENT_URL may hold multiple comma-separated origins for CORS purposes
-// (e.g. "http://localhost:3000,https://420rims-app-ashy.vercel.app").
+// (e.g. "http://localhost:3000,https://carmiumcars.com").
 // Anything that needs to build a single outbound link — Paystack callbacks,
 // email links, shareable listing URLs — should use this helper instead of
 // reading process.env.CLIENT_URL directly, so it always resolves to one

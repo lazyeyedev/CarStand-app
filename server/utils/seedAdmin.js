@@ -11,7 +11,7 @@ const validatePassword = require('./validatePassword');
 // --reset also sets passwordChangedAt, which signs out every existing admin session.
 const ADMIN_EMAIL    = (process.env.SEED_ADMIN_EMAIL || '').trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || '';
-const ADMIN_NAME     = process.env.SEED_ADMIN_NAME || 'CarStand Admin';
+const ADMIN_NAME     = process.env.SEED_ADMIN_NAME || 'Carmium Admin';
 const RESET          = process.argv.includes('--reset');
 
 const fail = (msg) => { console.error(msg); process.exit(1); };

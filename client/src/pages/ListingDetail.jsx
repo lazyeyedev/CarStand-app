@@ -53,7 +53,7 @@ export default function ListingDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  useEffect(() => { if (listing) document.title = `${listing.title} · CarStand`; }, [listing]);
+  useEffect(() => { if (listing) document.title = `${listing.title} · Carmium`; }, [listing]);
 
   const onEnquiry = async (data) => {
     setSubmitting(true);

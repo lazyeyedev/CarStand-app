@@ -1,4 +1,4 @@
-# CarStand — Ghana's Premier Car Marketplace
+# Carmium — Ghana's Premier Car Marketplace
 
 A full-stack web application for buying and selling vehicles across Ghana. Built by TechSphere, a division of Sevinity Holdings, Accra.
 
@@ -22,7 +22,7 @@ A full-stack web application for buying and selling vehicles across Ghana. Built
 ## Project Structure
 
 ```
-420rims-app/
+carmium-app/
 ├── client/          React frontend
 └── server/          Node.js + Express backend
 ```
@@ -97,18 +97,18 @@ npm start          # runs on http://localhost:3000
 
 ## Seeding the Admin User
 
-Run once after connecting to MongoDB:
+Credentials come from `server/.env`, never from the repo:
+
+```
+SEED_ADMIN_EMAIL=you@example.com
+SEED_ADMIN_PASSWORD=a-long-password-with-1-number
+```
 
 ```bash
 cd server
-npm run seed
+npm run seed              # creates the first admin; skips if one exists
+npm run seed -- --reset   # replaces the existing admin's email + password and signs out old admin sessions
 ```
-
-This creates:
-- **Email:** admin@carstand.net
-- **Password:** Admin@CarStand2026
-
-Change the password immediately after first login. Safe to run multiple times — skips if admin already exists.
 
 ---
 
@@ -162,4 +162,4 @@ DELETE /api/admin/listings/:id          Hard delete listing
 
 ---
 
-*CarStand · A TechSphere / Sevinity Holdings product · Accra, Ghana · 2026*
+*Carmium · A TechSphere / Sevinity Holdings product · Accra, Ghana · 2026*

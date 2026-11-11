@@ -33,7 +33,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-base">
-          <span>© {year} CarStand. All rights reserved.</span>
+          <span>© {year} Carmium. All rights reserved.</span>
           <span>A TechSphere / Sevinity Holdings product</span>
         </div>
       </div>

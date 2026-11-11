@@ -4,6 +4,9 @@ const { getPublicClientUrl } = require('./clientUrl');
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM   = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const SITE   = getPublicClientUrl();
+// Shown as link text in email footers — follows CLIENT_URL, so a domain change
+// never needs a code change.
+const SITE_HOST = SITE.replace(/^https?:\/\//, '').replace(/^www\./, '');
 
 const TYPE_LABEL = {
   general:    'General Enquiry',
@@ -31,7 +34,7 @@ const sendEnquiryNotification = async ({
         <!-- Header -->
         <tr>
           <td style="background:#0d0d0d;padding:24px 32px;">
-            <span style="color:#c9a84c;font-size:22px;font-weight:900;letter-spacing:2px;">CarStand</span>
+            <span style="color:#c9a84c;font-size:22px;font-weight:900;letter-spacing:2px;">Carmium</span>
           </td>
         </tr>
 
@@ -108,8 +111,8 @@ const sendEnquiryNotification = async ({
         <tr>
           <td style="background:#f9f9f9;padding:16px 32px;border-top:1px solid #e5e5e5;">
             <p style="margin:0;color:#aaa;font-size:12px;">
-              CarStand · Ghana's Premier Car Marketplace · 
-              <a href="${SITE}" style="color:#c9a84c;text-decoration:none;">carstand.net</a>
+              Carmium · Ghana's Premier Car Marketplace · 
+              <a href="${SITE}" style="color:#c9a84c;text-decoration:none;">${SITE_HOST}</a>
             </p>
           </td>
         </tr>
@@ -141,7 +144,7 @@ const sendWelcomeEmail = async ({ email, name }) => {
         <!-- Header -->
         <tr>
           <td style="background:#0d0d0d;padding:24px 32px;">
-            <span style="color:#c9a84c;font-size:22px;font-weight:900;letter-spacing:2px;">CarStand</span>
+            <span style="color:#c9a84c;font-size:22px;font-weight:900;letter-spacing:2px;">Carmium</span>
           </td>
         </tr>
 
@@ -182,7 +185,7 @@ const sendWelcomeEmail = async ({ email, name }) => {
         <tr>
           <td style="background:#f9f9f9;padding:16px 32px;border-top:1px solid #e5e5e5;">
             <p style="margin:0;color:#aaa;font-size:12px;">
-              CarStand · A TechSphere / Sevinity Holdings product · Accra, Ghana
+              Carmium · A TechSphere / Sevinity Holdings product · Accra, Ghana
             </p>
           </td>
         </tr>
@@ -196,7 +199,7 @@ const sendWelcomeEmail = async ({ email, name }) => {
   await resend.emails.send({
     from:    FROM,
     to:      email,
-    subject: 'Welcome to CarStand',
+    subject: 'Welcome to Carmium',
     html,
   });
 };
@@ -214,7 +217,7 @@ const sendPasswordResetEmail = async ({ email, name, resetUrl }) => {
         <!-- Header -->
         <tr>
           <td style="background:#0d0d0d;padding:24px 32px;">
-            <span style="color:#c9a84c;font-size:22px;font-weight:900;letter-spacing:2px;">CarStand</span>
+            <span style="color:#c9a84c;font-size:22px;font-weight:900;letter-spacing:2px;">Carmium</span>
           </td>
         </tr>
 
@@ -223,7 +226,7 @@ const sendPasswordResetEmail = async ({ email, name, resetUrl }) => {
           <td style="padding:32px;">
             <h2 style="margin:0 0 16px;color:#111;font-size:20px;">Reset your password</h2>
             <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.7;">
-              Hi ${name}, we received a request to reset the password on your CarStand account.
+              Hi ${name}, we received a request to reset the password on your Carmium account.
               This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
             </p>
 
@@ -248,7 +251,7 @@ const sendPasswordResetEmail = async ({ email, name, resetUrl }) => {
         <tr>
           <td style="background:#f9f9f9;padding:16px 32px;border-top:1px solid #e5e5e5;">
             <p style="margin:0;color:#aaa;font-size:12px;">
-              CarStand · A TechSphere / Sevinity Holdings product · Accra, Ghana
+              Carmium · A TechSphere / Sevinity Holdings product · Accra, Ghana
             </p>
           </td>
         </tr>
@@ -262,7 +265,7 @@ const sendPasswordResetEmail = async ({ email, name, resetUrl }) => {
   await resend.emails.send({
     from:    FROM,
     to:      email,
-    subject: 'Reset your CarStand password',
+    subject: 'Reset your Carmium password',
     html,
   });
 };

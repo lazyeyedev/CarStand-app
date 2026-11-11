@@ -71,7 +71,7 @@ export default function Icon({ name, label, className = '', size, style }) {
   );
 }
 
-// The CarStand mark: red carport roof over a car, matching the delivered logo.
+// The Carmium mark: red carport roof over a car, matching the delivered logo.
 export function BrandMark({ className = 'brand-mark' }) {
   return (
     <svg viewBox="0 0 40 40" className={className} aria-hidden="true" focusable="false">
@@ -85,9 +85,9 @@ export function BrandMark({ className = 'brand-mark' }) {
 
 export function Brand({ to = '/', Link }) {
   return (
-    <Link to={to} className="brand" aria-label="CarStand home">
+    <Link to={to} className="brand" aria-label="Carmium home">
       <BrandMark />
-      <span>Car<b>Stand</b></span>
+      <span>Car<b>mium</b></span>
     </Link>
   );
 }

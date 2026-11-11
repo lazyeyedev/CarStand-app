@@ -1,6 +1,6 @@
 {
-  "short_name": "CarStand",
-  "name": "CarStand — Ghana's Premier Car Marketplace",
+  "short_name": "Carmium",
+  "name": "Carmium — Ghana's Premier Car Marketplace",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a"
 }
