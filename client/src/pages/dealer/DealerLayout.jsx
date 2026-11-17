@@ -7,6 +7,7 @@ const SECTIONS = [
       { to: '/dealer/dashboard', label: 'Overview', icon: 'dashboard', end: true },
       { to: '/dealer/listings', label: 'My listings', icon: 'list', end: true },
       { to: '/dealer/listings/create', label: 'Add a listing', icon: 'plus' },
+      { to: '/dealer/enquiries', label: 'Enquiries', icon: 'message' },
       { to: '/dealer/profile', label: 'Dealer profile', icon: 'store' },
     ],
   },

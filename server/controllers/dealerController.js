@@ -88,7 +88,9 @@ const getDealerEnquiries = async (req, res) => {
   }
 
   const filter = { dealer: dealer._id };
-  if (req.query.status) filter.status = req.query.status;
+  // Whitelisted: the query parser turns ?status[$ne]=x into an object, which
+  // would otherwise reach Mongo as an operator.
+  if (['new', 'read', 'responded', 'closed'].includes(req.query.status)) filter.status = req.query.status;
 
   const [enquiries, total] = await Promise.all([
     Enquiry.find(filter)

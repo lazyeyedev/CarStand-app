@@ -376,18 +376,21 @@ const deleteListingAdmin = async (req, res) => {
 };
 
 // GET /api/admin/enquiries
+const ENQUIRY_STATUSES = ['new', 'read', 'responded', 'closed'];
+
 const getAllEnquiries = async (req, res) => {
-  const { page = 1, limit = 20 } = req.query;
   const { page: pageNum, limit: limitNum, skip } = paginate(req.query);
+  const filter = ENQUIRY_STATUSES.includes(req.query.status) ? { status: req.query.status } : {};
 
   const [enquiries, total] = await Promise.all([
-    Enquiry.find()
+    Enquiry.find(filter)
       .populate('listing', 'title')
       .populate('dealer', 'businessName')
+      .populate('user', 'name email phone')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum),
-    Enquiry.countDocuments(),
+    Enquiry.countDocuments(filter),
   ]);
 
   res.status(200).json({ enquiries, total, page: pageNum, totalPages: Math.ceil(total / limitNum) });

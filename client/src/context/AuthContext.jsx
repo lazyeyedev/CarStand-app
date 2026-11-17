@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../api/axiosInstance';
 
 const AuthContext = createContext(null);
@@ -7,6 +7,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [token, setToken]     = useState(() => localStorage.getItem('carstand_token'));
   const [loading, setLoading] = useState(true);
+  // Ids of listings the signed-in person has saved, as strings.
+  const [savedIds, setSavedIds] = useState([]);
 
   // Restore session on mount
   useEffect(() => {
@@ -27,6 +29,32 @@ export const AuthProvider = ({ children }) => {
     };
     restore();
   }, [token]);
+
+  // Login/register responses don't carry saved listings, so load them once
+  // per signed-in account. Admins can't use the buyer side, so skip them.
+  const userId = user?._id;
+  const userRole = user?.role;
+  useEffect(() => {
+    if (!userId || userRole === 'admin') { setSavedIds([]); return; }
+    let cancelled = false;
+    axiosInstance.get('/users/saved')
+      .then(({ data }) => { if (!cancelled) setSavedIds((data.savedIds || []).map(String)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [userId, userRole]);
+
+  const isSaved = useCallback((listingId) => savedIds.includes(String(listingId)), [savedIds]);
+
+  // Returns the new saved state. Throws on failure so the caller can toast.
+  const toggleSaved = async (listingId) => {
+    const id = String(listingId);
+    const wasSaved = savedIds.includes(id);
+    const { data } = wasSaved
+      ? await axiosInstance.delete(`/users/saved/${id}`)
+      : await axiosInstance.post(`/users/saved/${id}`);
+    setSavedIds((data.savedListings || []).map(String));
+    return !wasSaved;
+  };
 
   const storeToken = (t) => {
     localStorage.setItem('carstand_token', t);
@@ -81,6 +109,8 @@ export const AuthProvider = ({ children }) => {
         registerDealer,
         upgradeToDealer,
         logout,
+        isSaved,
+        toggleSaved,
         isDealer: user?.role === 'dealer',
         isAdmin:  user?.role === 'admin',
         isUser:   user?.role === 'user',

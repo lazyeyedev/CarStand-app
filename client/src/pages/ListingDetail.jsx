@@ -17,6 +17,39 @@ import { getPlaceholder } from '../utils/placeholder';
 
 const PLACEHOLDER = getPlaceholder(800, 520);
 
+function SaveButton({ listingId }) {
+  const { user, isSaved, toggleSaved } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  if (user?.role === 'admin') return null;
+  if (!user) {
+    return (
+      <Link to="/login" className="btn btn-secondary btn-sm">
+        <Icon name="star" /> Sign in to save
+      </Link>
+    );
+  }
+
+  const saved = isSaved(listingId);
+  const onClick = async () => {
+    setBusy(true);
+    try {
+      const nowSaved = await toggleSaved(listingId);
+      toast.success(nowSaved ? 'Saved to your profile' : 'Removed from saved cars');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'That did not work. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button type="button" className={`btn btn-sm ${saved ? 'btn-primary' : 'btn-secondary'}`} onClick={onClick} disabled={busy} aria-pressed={saved}>
+      <Icon name="star" /> {saved ? 'Saved' : 'Save car'}
+    </button>
+  );
+}
+
 const guestSchema = yup.object({
   guestName: yup.string().required('Enter your name'),
   guestEmail: yup.string().email('Enter a valid email').required('Enter your email'),
@@ -184,7 +217,10 @@ export default function ListingDetail() {
                 <span className="badge"><Icon name="eye" /> {listing.views || 0} views</span>
               </div>
               <h1 style={{ fontSize: 'var(--fs-3xl)' }}>{listing.title}</h1>
-              <div className="price-lg mt-2">{fmtPrice(listing.price, listing.currency)}</div>
+              <div className="row between wrap gap-3 mt-2">
+                <div className="price-lg">{fmtPrice(listing.price, listing.currency)}</div>
+                <SaveButton listingId={listing._id} />
+              </div>
             </div>
 
             <section aria-labelledby="specs-h">
