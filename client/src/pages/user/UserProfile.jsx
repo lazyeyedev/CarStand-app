@@ -17,12 +17,16 @@ export default function UserProfile() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [form, setForm] = useState({ name: '', phone: '' });
+  const [saved, setSaved] = useState([]);
 
   useEffect(() => {
     axiosInstance.get('/auth/me').then((r) => {
       setProfile(r.data.user);
       setForm({ name: r.data.user.name || '', phone: r.data.user.phone || '' });
     }).catch(() => toast.error('Your profile could not be loaded')).finally(() => setLoading(false));
+    axiosInstance.get('/users/saved')
+      .then(({ data }) => setSaved(data.listings || []))
+      .catch(() => {});
   }, []);
 
   const pickAvatar = (file) => {
@@ -54,7 +58,6 @@ export default function UserProfile() {
 
   const avatar = avatarPreview || profile?.avatar;
   const initials = profile?.name?.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2) || '?';
-  const saved = profile?.savedListings?.filter((l) => l && typeof l === 'object') || [];
 
   return (
     <div className="page">

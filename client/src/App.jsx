@@ -24,6 +24,7 @@ import DealerListings      from './pages/dealer/DealerListings';
 import DealerCreateListing from './pages/dealer/DealerCreateListing';
 import DealerEditListing   from './pages/dealer/DealerEditListing';
 import DealerProfile       from './pages/dealer/DealerProfile';
+import DealerEnquiries     from './pages/dealer/DealerEnquiries';
 import DealerBoost         from './pages/dealer/DealerBoost';
 import DealerBoostSuccess  from './pages/dealer/DealerBoostSuccess';
 
@@ -40,6 +41,7 @@ const AdminDealerDetail  = lazy(() => import('./pages/admin/AdminDealerDetail'))
 const AdminListings      = lazy(() => import('./pages/admin/AdminListings'));
 const AdminListingDetail = lazy(() => import('./pages/admin/AdminListingDetail'));
 const AdminBoosts        = lazy(() => import('./pages/admin/AdminBoosts'));
+const AdminEnquiries     = lazy(() => import('./pages/admin/AdminEnquiries'));
 
 const NotFound = () => (
   <div className="page">
@@ -105,6 +107,7 @@ function App() {
             <Route path="/dealer/listings/create"   element={<DealerCreateListing />} />
             <Route path="/dealer/listings/edit/:id" element={<DealerEditListing />} />
             <Route path="/dealer/profile"           element={<DealerProfile />} />
+            <Route path="/dealer/enquiries"         element={<DealerEnquiries />} />
             <Route path="/dealer/boost"             element={<DealerBoost />} />
             <Route path="/dealer/boost/success"     element={<DealerBoostSuccess />} />
           </Route>
@@ -118,6 +121,7 @@ function App() {
             <Route path="/admin/listings"  element={<AdminListings />} />
             <Route path="/admin/listings/:listingId" element={<AdminListingDetail />} />
             <Route path="/admin/boosts"    element={<AdminBoosts />} />
+            <Route path="/admin/enquiries" element={<AdminEnquiries />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

@@ -11,6 +11,7 @@ const SECTIONS = [
       { to: '/admin/dealers', label: 'Dealers', icon: 'store' },
       { to: '/admin/listings', label: 'Listings', icon: 'car' },
       { to: '/admin/users', label: 'Users', icon: 'users' },
+      { to: '/admin/enquiries', label: 'Enquiries', icon: 'message' },
       { to: '/admin/boosts', label: 'Boosts', icon: 'zap' },
     ],
   },

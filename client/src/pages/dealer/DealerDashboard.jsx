@@ -59,7 +59,7 @@ export default function DealerDashboard() {
 
       <div className="split split-narrow">
         <section className="card" aria-labelledby="enq-h">
-          <div className="card-head"><h2 id="enq-h" className="card-title">Recent enquiries</h2></div>
+          <div className="card-head row between"><h2 id="enq-h" className="card-title">Recent enquiries</h2><Link to="/dealer/enquiries" className="text-sm">View all</Link></div>
           {loading ? <TableSkeleton rows={4} cols={3} /> : enquiries.length === 0 ? (
             <EmptyState icon="message" title="No enquiries yet">
               When a buyer contacts you about a car, it appears here and is emailed to you.
@@ -86,6 +86,7 @@ export default function DealerDashboard() {
           <h2 id="qa-h" className="card-title mb-2">Quick actions</h2>
           <Link to="/dealer/listings/create" className="btn btn-primary btn-block"><Icon name="plus" /> Add a listing</Link>
           <Link to="/dealer/listings" className="btn btn-secondary btn-block"><Icon name="list" /> Manage listings</Link>
+          <Link to="/dealer/enquiries" className="btn btn-secondary btn-block"><Icon name="message" /> View enquiries</Link>
           <Link to="/dealer/profile" className="btn btn-secondary btn-block"><Icon name="store" /> Edit dealer profile</Link>
         </section>
       </div>
